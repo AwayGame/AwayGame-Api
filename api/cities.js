@@ -1,5 +1,4 @@
 var newYorkId = 'ChIJOwg_06VPwokRYv534QaPC8g'
-var config = require('../config');
 module.exports = {
     getCities: function(req, res) {
         rp({
