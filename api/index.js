@@ -1,4 +1,5 @@
 module.exports = {
-    Cities: require('./cities'),
-    Business: require('./business')
+    CitiesAndTeams: require('./citiesandteams'),
+    Business: require('./business'),
+    Events: require('./events')
 }
