@@ -37,9 +37,10 @@ app.post('/api/events/', function(req, res) {
 	return API.Events.searchTicketMasterForEvents(req, res);
 })
 
-//business
-app.get('/api/businesses', function(req, res) {
-    return API.Business.getBusinesses(req, res);
+
+//Gets locations of places to eat based on user input
+app.post('/api/getLocationsOfRestaurants', function(req, res) {
+    return API.Business.getLocationsOfRestaurants(req, res);
 });
 
 module.exports = app;

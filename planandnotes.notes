@@ -1,0 +1,74 @@
+Walkthrough: https://xd.adobe.com/view/e97bf0c0-61ef-48c7-9454-e746da2b31fc/screen/bd7f90c3-54e7-4199-8be1-28f8efaae221/Group-Select?fullscreen&hints=off
+
+Overview Of What I Did:
+	1. Got the database set up
+	2. Added cities to database:
+		LA
+		Chicago
+		ATL
+		Orlando
+		Miami
+		New York
+		Boston
+		San Francisco
+	3. Added ticket master API to search for events
+		For example, I click LA and my team is the lakers, then
+		I will search for all basketball events in LA between
+		the dates with that team
+
+What's Next/Issues:
+	1. Finding an API that has an updated/updating list of professional
+	teams - right now we will have to manually add them
+	2. Combining all data from FourSqaure and Yelp Fusion APIs
+	into one list of things to do.
+	3. Building basic itinerary object/function for front end
+	4. Starting documentation and final design of the API so that
+	Blake can use it
+	5. Throwing up API on server (probably Heroku)
+
+
+-----------------------------------------------------------
+    AwayGame Plan
+-----------------------------------------------------------
+
+User picks a city
+Picks a sports team
+Picks a date range
+Picks what they want to do
+
+Schema: {
+	activityCategories: {
+		these are activities that the user can choose (nightlife, club, etc)
+		each object will have: {
+			imageUrl: string,
+			name: string
+		}
+	},
+	itineraries: {
+		each object (itinerary) {
+			user: firebaseUserId,
+			events: array of events {
+				location,
+				eventTitle,
+				when
+			}
+		}
+	}
+}
+
+
+-Where are they going:
+	1. Get cities from database and have user choose city. when
+	they choose a city, send request to API for teams
+-Date start and end
+-What team
+	- Now that we have the team and time, search for tickets on 
+	Ticketmaster - this will show us events
+- What's to eat?
+	- Use FourSquare and Yelp to find locations of resturants
+	based on what the user picks
+- What to do:
+	- Find API that recommends things to do during day
+	- Find API that recommends things to do during night
+
+- Build itinerary
