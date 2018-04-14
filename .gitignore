@@ -1,3 +1,5 @@
-node_modules
-config.js
 npm-debug.log
+functions/config.js
+functions/node_mdoules
+functions/npm-debug.log
+functions/firebase-debug.log
