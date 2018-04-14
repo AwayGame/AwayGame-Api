@@ -10,3 +10,6 @@ cd AwayGame-Api/functions && npm install
 npm run serve
 ```
 This will give you a URL that you can hit with requests
+
+### Extras
+This API requires a `config.js` file in the `functions` directory. You will need to contact an administrator for access to this file, as it is in the `.gitignore`
