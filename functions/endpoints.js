@@ -11,8 +11,6 @@ module.exports = {
 
         var url = buildUrl(category)
 
-        console.log("going to this url: ", url)
-
         rp({
             method: "GET",
             headers: {

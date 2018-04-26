@@ -1,12 +1,15 @@
 const functions = require("firebase-functions")
-admin = require('firebase-admin');
 const express = require("express")
 const app = express()
 const cors = require('cors')
-config = require('./config')
 const Endpoints = require('./endpoints');
-helpers = require('./helpers')
+config = require('./config')
 rp = require('request-promise')
+admin = require('firebase-admin');
+
+//Load helpers
+const AlgoliaHelper = require('./helpers/algolia')
+const TicketMasterHelper = require('./helpers/ticketMaster')
 
 admin.initializeApp({
     credential: admin.credential.cert(config.appConfig),
@@ -14,24 +17,33 @@ admin.initializeApp({
 });
 
 db = admin.firestore();
+
 app.use(cors({ origin: true }))
 
-app.get('/cities', (req, res) => {
-	console.log("got here about to return the citie")
-    return Endpoints.getCities(req, res);
+
+/**
+ * Search Endpoints
+ */
+
+// Use Algolia search to find teams
+app.get('/search/team/:term', (req, res) => {
+	AlgoliaHelper.searchForTeams(req.params.term).then(results => {
+		return res.send(results)
+	})
 });
 
-app.get('/getTeamsFromCity/:cityId', (req, res) => {
-	return Endpoints.getTeamsFromCity(req, res);
+// Search for games via TicketMaster Discovery API
+app.post('/ticketmaster/searchForGames', (req, res) => {
+	TicketMasterHelper.searchForGames(req.body).then(results => {
+		return res.send(results)
+	}).catch(error => {
+		console.log("error: ", error)
+		return res.status(error.status).send({
+			error: error.error
+		})
+	})
 })
 
-app.post('/getEvents', (req, res) => {
-	return Endpoints.searchTicketMasterForEvents(req, res);
-})
-
-app.post('/getLocationsOfRestaurants', (req, res) => {
-    return Endpoints.getLocationsOfRestaurants(req, res);
-});
 
 const api = functions.https.onRequest(app)
 module.exports = { api }

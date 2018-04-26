@@ -1,0 +1,74 @@
+-----------------------------------------------------------
+    Itinerary/Sorting Events/ETC
+-----------------------------------------------------------
+
+Morning: 5:00am - 11:00am
+Lunch: 11:00 - 1:00pm
+Afternoon: 1:00 - 5:00pm
+Dinner: 5:00pm - 7:00pm
+Evening: 7:00pm - 10:00pm
+Night: 10:00pm - 5:00am
+
+
+-----------------------------------------------------------
+    Walkthrough
+-----------------------------------------------------------
+
+	1. Search for businesses based on categories that user enters
+	2. TRY TO BATCH businesses/{id} endpoint. If you can. If not, get
+	more details of every business using businesses/{id} endpoint
+	3. Once you have every business,
+		3a. Make 5 arrays: breakfast, morning activity, lunch, midday activity, dinner
+		3a. Push this many options: 
+
+
+-----------------------------------------------------------
+    Getting Initial Events
+-----------------------------------------------------------
+
+1. Make sure time is within when they get there and when they leave
+2. Make sure there is at least 1 activity of each option that the user entered for the game
+3. Duration of activity (NEED RESEARCH)
+4. Make sure location is open with right hours
+5. Make sure game is part of Itinerary and has appropriate time
+	5a. Should start half an hour before game starts
+	5b. Pull data for average time games lasts
+
+Data categories for each one
+Research and decide which services we are using
+
+-----------------------------------------------------------
+    Scoring
+-----------------------------------------------------------
+
+for every option per day, we need 3 choices
+1st choice will be the option with the highest score
+
+Scoring will be based on the following criteria:
+	1. Distance to stadium or activity - there should be a max
+	distance away from stadium PLUS distance between each activity
+		>=0.1m = 8
+		>=0.2m = 7
+		>=0.5m = 6
+		>=1.0m = 5
+		>=1.5m = 4
+		>=2.0m = 3
+		>=3.0m = 2
+		>=5.8m = 1
+
+	2. Rating:
+		5 stars: 10
+		4 stars: 6
+		3 stars: 3
+
+		If rating is between two ints, round
+
+	3. Cost:
+		Write function stub for calculating points based on cost
+
+	4. If the score is the same, pick the event that is closest
+
+
+
+		
+		
