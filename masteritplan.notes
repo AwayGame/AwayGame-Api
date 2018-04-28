@@ -14,6 +14,25 @@ Night: 10:00pm - 5:00am
     Walkthrough
 -----------------------------------------------------------
 
+
+POST data for now...
+
+scenario
+
+I'm going to a Chicago cubs game. I like bar food and local cusine. I
+want to see famous sights in the day, and go to bars and clubs at night. I'm
+getting there at 11:00am on Friday, the game is at 6:00pm and lasts until
+10:00pm on Saturday, and I'm heading home Sunday at 1:00pm
+
+{
+	lat/long of stadium
+	radius around stadium - defaults to 2 miles
+}
+
+
+
+
+
 	1. Search for businesses based on categories that user enters
 	2. TRY TO BATCH businesses/{id} endpoint. If you can. If not, get
 	more details of every business using businesses/{id} endpoint
@@ -69,6 +88,39 @@ Scoring will be based on the following criteria:
 	4. If the score is the same, pick the event that is closest
 
 
+		
+Google Regular:
+- Name
+- Photos
+- Price Level (0-4)
+- Rating (1-5)
+- Vicinity
 
-		
-		
+Google Detailed:
+- Full Address
+- Formatted Phone Number
+- Days Open
+- Hours Open
+- 5 Reviews with text, author, and timestamp
+- Maps URL
+- Location's website
+
+Yelp Regular:
+- Name
+- Coordinates
+- Image
+- Address
+- Distance from location
+- Yelp URL
+- Number of reviews
+- Rating (1-5)
+- Price Level (1-4)
+- Unformatted Phone Number
+- Transaction (services offered)
+
+Yelp Detailed:
+- Photos
+- Days Open
+- Hours Open
+- Is overnight?
+- Cross-streets (Intersection)

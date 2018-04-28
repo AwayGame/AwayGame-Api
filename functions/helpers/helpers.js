@@ -1,3 +1,5 @@
+// Helper functions
+
 module.exports = {
     checkForMissingFields: function(requiredParams, data) {
         let missingKeys = []
@@ -26,5 +28,8 @@ module.exports = {
         function addExtraZero(val) {
             return ((val < 10) ? ('0' + val) : val)
         }
-    }    
+    },
+    milesToRadius: (miles) => {
+        return config.milesToRadiusConversions[miles]
+    }
 }
