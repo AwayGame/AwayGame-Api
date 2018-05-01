@@ -6,13 +6,58 @@
  */
 
 var helpers = require('./helpers')
+var googleMapsClient = require('@google/maps').createClient({
+    key: config.google.placesApiKey
+});
+
+/*
+Use this eventually
+ 
+googleMaps.places({
+  query: 'fast food',
+  language: 'en',
+  location: [-33.865, 151.038],
+  radius: 5000,
+  minprice: 1,
+  maxprice: 4,
+  opennow: true,
+  type: 'restaurant'
+})
+.asPromise()
+.then(function(response) {
+  expect(response.json.results).toEqual(
+      arrayContaining([
+        objectContaining({
+          name: stringMatching('McDonalds')
+        })
+      ]));
+})
+
+*/
 
 module.exports = {
+    /**
+     * Finds businesses from Google. This process currently requires three
+     * requests for the following activities:
+     *  1. Food options
+     *  2. "Day" activities
+     *  3. "Night" activities
+     * @param  {Object} Object with the user's preferences
+     * @return {Array} An array of businesses, ready for sortings
+     */
     findBusinesses: (data) => {
         return new Promise((resolve, reject) => {
-            let url = getBusinessesUrl(data)
-            getBusinesses(url).then((businesses) => {
+            // Get the three URLS
+            let urls = [...getBusinessUrls('food', data), ...getBusinessUrls('day', data), ...getBusinessUrls('night', data)]
+            getBusinesses(urls).then((businesses) => {
                 return resolve(businesses)
+            })
+        })
+    },
+    getMoreDetails: (businesses) => {
+        return new Promise((resolve, reject) => {
+            getBusinessesInMoreDetail(businesses).then(detailedBusinesses => {
+                return resolve(detailedBusinesses)
             })
         })
     }
@@ -20,67 +65,111 @@ module.exports = {
 
 
 /**
+ * 
  * Function definitions
+ * 
  */
 
-function getBusinesses(url) {
+
+
+function getBusinesses(urls) {
+    let results = []
+    let totalRequests = 0
     return new Promise((resolve, reject) => {
-        getInitialList(url).then(initialListOfBusinesses => {
-            getBusinessesInMoreDetail(initialListOfBusinesses).then(detailedBusinesses => {
-                return resolve(detailedBusinesses)
+        urls.forEach(urlObject => {
+            rp({
+                method: "GET",
+                uri: urlObject.url,
+                json: true
+            }).then(function(response) {
+                response.results.forEach(result => {
+                    result.type = urlObject.type
+                    results.push(result)
+                })
+
+                totalRequests++
+                if (totalRequests === urls.length) {
+                    //remove duplicates
+                    results = removeDuplicates(results, 'place_id')
+                    return resolve(results)
+                }
             })
         })
     })
+
+    function removeDuplicates(myArr, prop) {
+        return myArr.filter((obj, pos, arr) => {
+            return arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos;
+        });
+    }
 }
 
 /**
  * Creates the initial search URL to activities, food, etc. for the user
- * @param  {Object} The data passed in from the application
+ * @param  type {String} The type of url to get
+ * @param  data {Object} The data passed in from the application
  * @return {String} The URL to make the request to
  */
-function getBusinessesUrl(data) {
-    let url = config.google.findNearbyBusinessesUrl
-    //Add location of stadium user is going to
-    addStadiumLocation()
-    // Add distance from stadium
-    addDistanceFromStadium()
-    //Add food and drinks
-    addFoodAndDrinks()
-    //Add activites user is going to want to do
-    //addActivities()
-    //Finally, add the API key
-    addApiKey()
-    return url
+function getBusinessUrls(type, data) {
+    // Set up base URL
+    let baseUrl = setUpUrl(data)
 
-    function addStadiumLocation() {
-        url += 'location=' + data.lat + ',' + data.long
+    switch (type) {
+        case 'food':
+            return handleFoodUrls(baseUrl)
+            break;
+        case 'day':
+            return handleDayActivites(baseUrl)
+            break;
+        case 'night':
+            return handleNightActivites(baseUrl)
+            break;
     }
 
-    function addDistanceFromStadium() {
-        url += '&radius=' + helpers.milesToRadius(data.radius)
-    }
-
-    function addFoodAndDrinks() {
-        //@todo
-        url += '&type=restaurant&keyword=pizza'
-    }
-
-    function addApiKey() {
-        url += '&key=' + config.google.placesApiKey
-    }
-}
-
-
-function getInitialList(url) {
-    return new Promise((resolve, reject) => {
-        rp({
-            method: "GET",
-            uri: url,
-            json: true
-        }).then(function(response) {
-            return resolve(response.results)
+    function handleFoodUrls(baseUrl) {
+        return data.preferences.food.map(preference => {
+            let url = baseUrl
+            url += '&type=restaurant&keyword=' + config.google.foodCategories[preference]
+            return {
+                url: url,
+                type: 'food'
+            }
         })
-    })
+    }
+
+    function handleDayActivites(baseUrl) {
+        return data.preferences.dayActivities.map(preference => {
+            let url = baseUrl
+            url += '&keyword=' + config.google.dayActivities[preference]
+            return {
+                url: url,
+                type: 'day'
+            }
+        })
+
+    }
+
+    function handleNightActivites(baseUrl) {
+        return data.preferences.nightActivities.map(preference => {
+            let url = baseUrl
+            url += '&keyword=' + config.google.nightActivities[preference]
+            return {
+                url: url,
+                type: 'night'
+            }
+        })
+    }
+
+    function setUpUrl(data) {
+        let url = config.google.findNearbyBusinessesUrl;
+        // Add stadium location
+        url += 'location=' + data.lat + ',' + data.long
+        // Add radius from stadium
+        url += '&radius=' + helpers.milesToRadius(data.radius)
+        // Add API key
+        url += '&key=' + config.google.placesApiKey
+        return url
+    }
 }
 
 function getBusinessesInMoreDetail(businesses) {

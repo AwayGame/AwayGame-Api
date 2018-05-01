@@ -1,23 +1,18 @@
 -----------------------------------------------------------
-    Itinerary/Sorting Events/ETC
+    What I Did
 -----------------------------------------------------------
 
-Morning: 5:00am - 11:00am
-Lunch: 11:00 - 1:00pm
-Afternoon: 1:00 - 5:00pm
-Dinner: 5:00pm - 7:00pm
-Evening: 7:00pm - 10:00pm
-Night: 10:00pm - 5:00am
+- Search for businesses based on categories entered for
+	- Food
+	- Day
+	- Night
 
 
 -----------------------------------------------------------
-    Walkthrough
+    Part One - Getting Places
 -----------------------------------------------------------
 
-
-POST data for now...
-
-scenario
+Scenario
 
 I'm going to a Chicago cubs game. I like bar food and local cusine. I
 want to see famous sights in the day, and go to bars and clubs at night. I'm
@@ -25,39 +20,72 @@ getting there at 11:00am on Friday, the game is at 6:00pm and lasts until
 10:00pm on Saturday, and I'm heading home Sunday at 1:00pm
 
 {
-	lat/long of stadium
-	radius around stadium - defaults to 2 miles
+	lat: double - lat of stadium
+	long: double - long of stadium
+	radius: string - radius of miles to search,
+	preferences: {
+    	dayActivities: ["museums"],
+    	nightActivities: ["nightclubs"],
+    	food: ["localCusine", "barFood"]
+    },
+    arrivalTime: "25 May 2018 09:00:00",
+    departureTime: "28 May 2018 15:00:00"
 }
 
+-----------------------------------------------------------
+    Tuesday - Filling In Their Trip
+-----------------------------------------------------------
+
+- Add 1 activity/food per timeslot per day
+	- breakfast, morning activity, lunch, midday activity, dinner, night activity
+- Make sure there is at least one of each activity for the trip
+
+-----------------------------------------------------------
+    Wednesday - Time
+-----------------------------------------------------------
+
+- Make sure activities are in correct time frames:
+	- Morning: 5:00am - 11:00am
+	- Lunch: 11:00 - 1:00pm
+	- Afternoon: 1:00 - 5:00pm
+	- Dinner: 5:00pm - 7:00pm
+	- Evening: 7:00pm - 10:00pm
+	- Night: 10:00pm - 5:00am
+- Account for time leaving and time getting there into
+itinerary
+- Make sure location is open with right hours
+- Add a "random" game into the Itinerary for testing
+	- Game is between 3 and 5 hours long
+	- Should start half an hour before game starts
+	- Placed on a random day of the trip
+	- Use this for testing
+
+-----------------------------------------------------------
+    Thursday - Cleaning It All Up
+-----------------------------------------------------------
+
+- Pull data for average time games lasts and add it to itinerary
+- Duration of activity
+- Change the way details request is being sent to batch
+
+-----------------------------------------------------------
+    Friday - Final Additions
+-----------------------------------------------------------
+
+- TBD
 
 
 
 
-	1. Search for businesses based on categories that user enters
-	2. TRY TO BATCH businesses/{id} endpoint. If you can. If not, get
-	more details of every business using businesses/{id} endpoint
-	3. Once you have every business,
-		3a. Make 5 arrays: breakfast, morning activity, lunch, midday activity, dinner
-		3a. Push this many options: 
+
+
+
+
+
 
 
 -----------------------------------------------------------
-    Getting Initial Events
------------------------------------------------------------
-
-1. Make sure time is within when they get there and when they leave
-2. Make sure there is at least 1 activity of each option that the user entered for the game
-3. Duration of activity (NEED RESEARCH)
-4. Make sure location is open with right hours
-5. Make sure game is part of Itinerary and has appropriate time
-	5a. Should start half an hour before game starts
-	5b. Pull data for average time games lasts
-
-Data categories for each one
-Research and decide which services we are using
-
------------------------------------------------------------
-    Scoring
+    Part Two - Scoring
 -----------------------------------------------------------
 
 for every option per day, we need 3 choices
@@ -86,41 +114,3 @@ Scoring will be based on the following criteria:
 		Write function stub for calculating points based on cost
 
 	4. If the score is the same, pick the event that is closest
-
-
-		
-Google Regular:
-- Name
-- Photos
-- Price Level (0-4)
-- Rating (1-5)
-- Vicinity
-
-Google Detailed:
-- Full Address
-- Formatted Phone Number
-- Days Open
-- Hours Open
-- 5 Reviews with text, author, and timestamp
-- Maps URL
-- Location's website
-
-Yelp Regular:
-- Name
-- Coordinates
-- Image
-- Address
-- Distance from location
-- Yelp URL
-- Number of reviews
-- Rating (1-5)
-- Price Level (1-4)
-- Unformatted Phone Number
-- Transaction (services offered)
-
-Yelp Detailed:
-- Photos
-- Days Open
-- Hours Open
-- Is overnight?
-- Cross-streets (Intersection)
