@@ -6,6 +6,8 @@
 	- Food
 	- Day
 	- Night
+- Add 1 activity/food per timeslot per day
+- Make sure there is at least one of each activity for the trip
 
 
 -----------------------------------------------------------
@@ -32,13 +34,6 @@ getting there at 11:00am on Friday, the game is at 6:00pm and lasts until
     departureTime: "28 May 2018 15:00:00"
 }
 
------------------------------------------------------------
-    Tuesday - Filling In Their Trip
------------------------------------------------------------
-
-- Add 1 activity/food per timeslot per day
-	- breakfast, morning activity, lunch, midday activity, dinner, night activity
-- Make sure there is at least one of each activity for the trip
 
 -----------------------------------------------------------
     Wednesday - Time
@@ -51,14 +46,6 @@ getting there at 11:00am on Friday, the game is at 6:00pm and lasts until
 	- Dinner: 5:00pm - 7:00pm
 	- Evening: 7:00pm - 10:00pm
 	- Night: 10:00pm - 5:00am
-- Account for time leaving and time getting there into
-itinerary
-- Make sure location is open with right hours
-- Add a "random" game into the Itinerary for testing
-	- Game is between 3 and 5 hours long
-	- Should start half an hour before game starts
-	- Placed on a random day of the trip
-	- Use this for testing
 
 -----------------------------------------------------------
     Thursday - Cleaning It All Up
@@ -67,6 +54,9 @@ itinerary
 - Pull data for average time games lasts and add it to itinerary
 - Duration of activity
 - Change the way details request is being sent to batch
+- Account for time leaving and time getting there into
+itinerary
+- Make sure location is open with right hours
 
 -----------------------------------------------------------
     Friday - Final Additions

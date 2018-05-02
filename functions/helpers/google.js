@@ -83,7 +83,8 @@ function getBusinesses(urls) {
                 json: true
             }).then(function(response) {
                 response.results.forEach(result => {
-                    result.type = urlObject.type
+                    result.category = urlObject.category
+                    result.subcategory = urlObject.subcategory
                     results.push(result)
                 })
 
@@ -116,46 +117,49 @@ function getBusinessUrls(type, data) {
 
     switch (type) {
         case 'food':
-            return handleFoodUrls(baseUrl)
+            return formatFoodUrlAndAddCategories(baseUrl)
             break;
         case 'day':
-            return handleDayActivites(baseUrl)
+            return formatDayUrlAndAddCategories(baseUrl)
             break;
         case 'night':
-            return handleNightActivites(baseUrl)
+            return handleNightUrlAndAddCategories(baseUrl)
             break;
     }
 
-    function handleFoodUrls(baseUrl) {
+    function formatFoodUrlAndAddCategories(baseUrl) {
         return data.preferences.food.map(preference => {
             let url = baseUrl
             url += '&type=restaurant&keyword=' + config.google.foodCategories[preference]
             return {
                 url: url,
-                type: 'food'
+                category: 'food',
+                subcategory: preference
             }
         })
     }
 
-    function handleDayActivites(baseUrl) {
+    function formatDayUrlAndAddCategories(baseUrl) {
         return data.preferences.dayActivities.map(preference => {
             let url = baseUrl
             url += '&keyword=' + config.google.dayActivities[preference]
             return {
                 url: url,
-                type: 'day'
+                category: 'day',
+                subcategory: preference
             }
         })
 
     }
 
-    function handleNightActivites(baseUrl) {
+    function handleNightUrlAndAddCategories(baseUrl) {
         return data.preferences.nightActivities.map(preference => {
             let url = baseUrl
             url += '&keyword=' + config.google.nightActivities[preference]
             return {
                 url: url,
-                type: 'night'
+                category: 'night',
+                subcategory: preference
             }
         })
     }
@@ -175,11 +179,10 @@ function getBusinessUrls(type, data) {
 function getBusinessesInMoreDetail(businesses) {
     return new Promise((resolve, reject) => {
         let detailedResults = []
-
         businesses.forEach(business => {
             let url = config.google.getBusinessInMoreDetailUrl
             url += 'placeid=' + business.place_id + '&key=' + config.google.placesApiKey
-
+            
             rp({
                 method: "GET",
                 uri: url,
@@ -188,10 +191,14 @@ function getBusinessesInMoreDetail(businesses) {
                 if (response.result) {
                     let detailedBusiness = formatBusinessResult(response.result)
                     detailedResults.push(detailedBusiness)
+
                     //Check to see if we're done
                     if (detailedResults.length === businesses.length) {
                         return resolve(detailedResults)
                     }
+                } else {
+                    //handle error here...
+                    console.log("error: ", response)
                 }
             })
         })
@@ -235,6 +242,8 @@ function getBusinessesInMoreDetail(businesses) {
          * @return {Object} hours
          */
         function getHours(business) {
+            if(!business.opening_hours) return {}
+            
             return {
                 formattedHours: business.opening_hours.weekday_text,
                 individualDaysData: business.opening_hours.periods
@@ -247,6 +256,7 @@ function getBusinessesInMoreDetail(businesses) {
          * @return {Array}  Array of photo IDs
          */
         function getPhotoIds(business) {
+            if(!business.photos) return []
             return business.photos.map(photo => {
                 return photo.photo_reference
             })
