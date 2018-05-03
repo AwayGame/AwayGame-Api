@@ -1,19 +1,5 @@
 /**
- * Google Helper
- *
- * This helper uses the Google Places API to find locations for the user
- * to eat, visit, etc
- */
-
-var helpers = require('./helpers')
-var googleMapsClient = require('@google/maps').createClient({
-    key: config.google.placesApiKey
-});
-
-/*
-Use this eventually
- 
-googleMaps.places({
+ * googleMaps.places({
   query: 'fast food',
   language: 'en',
   location: [-33.865, 151.038],
@@ -32,8 +18,19 @@ googleMaps.places({
         })
       ]));
 })
+ */
 
-*/
+/**
+ * Google Helper
+ *
+ * This helper uses the Google Places API to find locations for the user
+ * to eat, visit, etc
+ */
+
+var helpers = require('./helpers')
+var googleMapsClient = require('@google/maps').createClient({
+    key: config.google.placesApiKey
+});
 
 module.exports = {
     /**
@@ -77,14 +74,8 @@ function getBusinesses(urls) {
     let totalRequests = 0
     return new Promise((resolve, reject) => {
         urls.forEach(urlObject => {
-            rp({
-                method: "GET",
-                uri: urlObject.url,
-                json: true
-            }).then(function(response) {
-                response.results.forEach(result => {
-                    result.category = urlObject.category
-                    result.subcategory = urlObject.subcategory
+            getBusinessesFromGoogle(urlObject).then(response => {
+                response.forEach(result => {
                     results.push(result)
                 })
 
@@ -92,11 +83,48 @@ function getBusinesses(urls) {
                 if (totalRequests === urls.length) {
                     //remove duplicates
                     results = removeDuplicates(results, 'place_id')
+
+                    for (var i = 0; i < results.length; i++) {
+                        // Remove businesses with not enough data
+                        if (!results[i].opening_hours || !results[i].place_id || !results[i].price) results.splice(i, 1)
+                    }
+
                     return resolve(results)
                 }
             })
         })
     })
+
+    function getBusinessesFromGoogle(obj) {
+        return new Promise((resolve, reject) => {
+            let results = []
+
+            makeRequests(obj, results)
+
+            function makeRequests(urlObject, results) {
+                rp({
+                    method: "GET",
+                    uri: urlObject.url,
+                    json: true
+                }).then(function(response) {
+                    response.results.forEach(business => {
+                        business.category = urlObject.category
+                        business.subcategory = urlObject.subcategory
+                        results.push(business)
+                    })
+
+                    if (response.next_page_token) {
+                        urlObject.url = urlObject.url.split('&pagetoken=')[0] + '&pagetoken=' + response.next_page_token
+                        setTimeout(function() {
+                            makeRequests(urlObject, results)
+                        }, 1500)
+                    } else {
+                        return resolve(results)
+                    }
+                })
+            }
+        })
+    }
 
     function removeDuplicates(myArr, prop) {
         return myArr.filter((obj, pos, arr) => {
@@ -182,13 +210,16 @@ function getBusinessesInMoreDetail(businesses) {
         businesses.forEach(business => {
             let url = config.google.getBusinessInMoreDetailUrl
             url += 'placeid=' + business.place_id + '&key=' + config.google.placesApiKey
-            
+
             rp({
                 method: "GET",
                 uri: url,
                 json: true
             }).then(function(response) {
                 if (response.result) {
+                    response.result.category = business.category
+                    response.result.subcategory = business.subcategory
+
                     let detailedBusiness = formatBusinessResult(response.result)
                     detailedResults.push(detailedBusiness)
 
@@ -212,6 +243,7 @@ function getBusinessesInMoreDetail(businesses) {
     function formatBusinessResult(business) {
         return {
             name: business.name,
+            placeId: business.place_id,
             phone: business.formatted_phone_number,
             address: business.formatted_address,
             location: getLocation(business),
@@ -220,7 +252,9 @@ function getBusinessesInMoreDetail(businesses) {
             reviews: business.reviews,
             photos: getPhotoIds(business),
             price: business.price_level,
-            rating: business.rating
+            rating: business.rating,
+            category: business.category,
+            subcategory: business.subcategory
         }
 
         /**
@@ -242,8 +276,8 @@ function getBusinessesInMoreDetail(businesses) {
          * @return {Object} hours
          */
         function getHours(business) {
-            if(!business.opening_hours) return {}
-            
+            if (!business.opening_hours) return {}
+
             return {
                 formattedHours: business.opening_hours.weekday_text,
                 individualDaysData: business.opening_hours.periods
@@ -256,7 +290,7 @@ function getBusinessesInMoreDetail(businesses) {
          * @return {Array}  Array of photo IDs
          */
         function getPhotoIds(business) {
-            if(!business.photos) return []
+            if (!business.photos) return []
             return business.photos.map(photo => {
                 return photo.photo_reference
             })

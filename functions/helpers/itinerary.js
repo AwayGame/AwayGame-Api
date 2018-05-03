@@ -2,6 +2,15 @@ var helpers = require('./helpers')
 var GoogleHelper = require('./google')
 var moment = require('moment')
 
+const TIMES = {
+    'breakfast': 500,
+    'morningActivity': 1000,
+    'lunch': 1200,
+    'afternoonActivity': 1400,
+    'dinner': 1800,
+    'eveningActivity': 2100
+}
+
 module.exports = {
     /**
      * Creates the user's itinerary by reaching out to our partners
@@ -23,7 +32,6 @@ module.exports = {
                 totalUserOptions += data.preferences.dayActivities.length
                 totalUserOptions += data.preferences.nightActivities.length
 
-
                 let arrivalTime = moment(data.arrivalTime);
                 let departureTime = moment(data.departureTime);
                 // Todo: change to hours
@@ -40,8 +48,9 @@ module.exports = {
                     getMoreDetails(finalChoices).then(finalBusinessData => {
                         console.log("got the details of the businesses")
                         let finalBusinesses = [...finalBusinessData[0]]
-                        let itinerary = formatItineraryFromBusinesses(arrivalTime, departureTime, finalBusinesses)
-                        return resolve(itinerary)
+                        formatItineraryFromBusinesses(arrivalTime, departureTime, finalBusinesses).then(itinerary => {
+                            return resolve(itinerary)
+                        })
                     })
                 })
             })
@@ -55,75 +64,128 @@ module.exports = {
          * @return {Object}         itinerary       The user's itinerary
          */
         function formatItineraryFromBusinesses(arrivalDate, departureDate, businesses) {
+            return new Promise((resolve, reject) => {
+                // Format the businesses into an itinerary for the user
+                // Each key is a day in the user's trip, with the times
+                // listed out as keys as well
 
-            console.log("arrival date: ", arrivalDate)
-            console.log("departure date: ", departureDate)
-            console.dir("businessess: ", businesses)
-            // Format the businesses into an itinerary for the user
-            // Each key is a day in the user's trip, with the times
-            // listed out as keys as well
+                let itinerary = {}
 
-            let itinerary = {}
-
-            while (arrivalDate.isSameOrBefore(departureDate)) {
-                itinerary[arrivalDate.format()] = getActivitiesForTheDay(arrivalDate)
-
-                arrivalDate.add(1, 'days');
-            }
-
-            /**
-             * Formats a "day" object for the itinerary
-             * @return {Object} A full day of activities
-             */
-            function getActivitiesForTheDay(date) {
-                let day = {}
-                return day
-
-                day = addBreakfast(day)
-                day = addMorningActivity(day)
-                day = addLunch(day)
-                day = addAfternoonActivity(day)
-                day = addDinner(day)
-                day = addEveningActivity(day)
-
-                return day
-
-                // 9:00am
-                function addBreakfast(day) {
-                    day['breakfast']
-                    return day
+                while (arrivalDate.isSameOrBefore(departureDate)) {
+                    itinerary[arrivalDate.format()] = getActivitiesForTheDay(businesses, arrivalDate)
+                    arrivalDate.add(1, 'days');
                 }
 
-                // 10:00am - 12:00pm
-                function addMorningActivity(day) {
+                return resolve(itinerary)
 
-                    return day
+                /**
+                 * Formats a "day" object for the itinerary
+                 * @return {Object} A full day of activities
+                 */
+                function getActivitiesForTheDay(businesses, date) {
+                    let day = {}
+
+                    day['breakfast'] = getBusinessOpenAtAvailableTime('food', businesses, date.day(), 'breakfast')
+                    console.log("removing breakfast")
+                    removeBusinesses(day['breakfast'].placeId)
+                    day['morningActivity'] = getBusinessOpenAtAvailableTime('day', businesses, date.day(), 'morningActivity')
+                    console.log("removing morningActivity")
+                    removeBusinesses(day['morningActivity'].placeId)
+                    day['lunch'] = getBusinessOpenAtAvailableTime('food', businesses, date.day(), 'lunch')
+                    console.log("removing lunch")
+                    removeBusinesses(day['lunch'].placeId)
+                    day['afternoonActivity'] = getBusinessOpenAtAvailableTime('day', businesses, date.day(), 'afternoonActivity')
+                    console.log("removing afternoonActivity")
+                    removeBusinesses(day['afternoonActivity'].placeId)
+                    day['dinner'] = getBusinessOpenAtAvailableTime('food', businesses, date.day(), 'dinner')
+                    console.log("removing dinner")
+                    removeBusinesses(day['dinner'].placeId)
+                    day['eveningActivity'] = getBusinessOpenAtAvailableTime('night', businesses, date.day(), 'eveningActivity')
+                    console.log("removing eveningActivity")
+                    removeBusinesses(day['eveningActivity'].placeId)
+
+                    function removeBusinesses(id) {
+                        businesses.forEach((business, index) => {
+                            if (business.placeId === id) {
+                                businesses.splice(index, 1)
+                            }
+                        })
+                    }
+
+                    /**
+                     * Determines if a business is open and in an available time for the user
+                     * @param  {Object}     The business we are comparing
+                     * @param  {Int}        The day (0 - 6) that we need the business to be open on
+                     * @param  {Int}.       The time as an int that the business has to be open at
+                     * @return {Boolean}    True/False if it is open
+                     */
+                    function getBusinessOpenAtAvailableTime(category, businesses, day, time) {
+                        console.log("we have this many: ", businesses.length)
+                        for (var i = 0; i < businesses.length; i++) {
+                            let business = businesses[i]
+                            if (business.hours.individualDaysData) {
+                                for (var j = 0; j < business.hours.individualDaysData.length; j++) {
+                                    let businessDay = business.hours.individualDaysData[j]
+                                    // If the business matches the category we are looking for and it opens before our starting time, then add it
+                                    if (business.category === category && businessDay.open.day === day && businessIsOpenOnTime(businessDay, TIMES[time])) {
+                                        console.log("hey we got one that matches " + time + ": ", business.name)
+                                        return business
+                                    }
+                                }
+                            }
+                        }
+
+                        //if we got here something messed up
+                        console.log("\n\nthis category is about to fail...", time)
+                        console.log("here was the day: ", day)
+                        console.log("category: ", category)
+
+                        for (var i = 0; i < businesses.length; i++) {
+                            let business = businesses[i]
+                            if (business.hours.individualDaysData) {
+                                console.log("it has individualDaysData")
+                                console.log("category: ", business.category)
+                                for (var j = 0; j < business.hours.individualDaysData.length; j++) {
+                                    let businessDay = business.hours.individualDaysData[j]
+                                    
+                                    if(business.category === category && businessDay.open.day === day) {
+                                        console.log("checkong today: ", businessDay)
+                                        console.log("open?: ", businessIsOpenOnTime(businessDay, TIMES[time]))
+                                    }
+
+                                    // If the business matches the category we are looking for and it opens before our starting time, then add it
+                                    if (business.category === category && businessDay.open.day === day && businessIsOpenOnTime(businessDay, TIMES[time])) {
+                                        console.log("hey we got one that matches " + time + ": ", business.name)
+                                        return business
+                                    }
+                                }
+                            }
+                        }
+
+                        //late night
+
+                        // {
+                        //     close: { day: 5, time: '0300' },
+                        //     open: { day: 4, time: '2200' }
+                        // }
+
+                        // {
+                        //     close: { day: 3, time: '2100' },
+                        //     open: { day: 3, time: '1000' }
+                        // }
+
+                        function businessIsOpenOnTime(businessDay, time) {
+                            // If it's open, return true
+                            if (parseInt(businessDay.open.time) <= time) return true
+                            if (parseInt(businessDay.close.time) > time) return true
+                            // If the business closes on a different day, this means it is open past midnight, which
+                            // is before our cap
+                            if (businessDay.close.day != businessDay.open.day) return true
+                            return false
+                        }
+                    }
                 }
-
-                // 12:00pm - 2:00pm
-                function addLunch(day) {
-
-                    return day
-                }
-
-                // 2:00pm - 5:00pm
-                function addAfternoonActivity(day) {
-
-                    return day
-                }
-
-                // 5:00 - 7:00pm
-                function addDinner(day) {
-
-                    return day
-                }
-
-                // 7:00pm - end
-                function addEveningActivity(day) {
-
-                    return day
-                }
-            }
+            })
         }
 
         /**
@@ -140,11 +202,6 @@ module.exports = {
          */
         function getTopPicksForUserCategories(numberOfDaysInTrip, numberOfCategoriesPicked, businesses) {
             return new Promise((resolve, reject) => {
-                // Remove businesses with no hours posted
-                businesses.forEach(function(business, index) {
-                    if (!business.opening_hours || !business.place_id) businesses.splice(index, 1)
-                })
-
                 // Sort the businesses by rating, then get more details
                 businesses = businesses.sort(function(a, b) {
                     return b.rating - a.rating
@@ -175,15 +232,12 @@ module.exports = {
                 for (var i = 0; i < numberOfDaysInTrip; i++) {
                     Object.keys(data).forEach(category => {
                         Object.keys(data[category]).forEach(subcategory => {
-                            let start = (i === 0) ? 0 : (i * 3)
-                            let end = (i === 0) ? 3 : (start + 3)
+                            let start = (i === 0) ? 0 : (i * 5)
+                            let end = (i === 0) ? 5 : (start + 5)
                             finalBusinesses = finalBusinesses.concat(data[category][subcategory].slice(0, 3))
                         })
                     })
                 }
-
-                console.log("Got the top results plus 2 backups for a trip for " + numberOfDaysInTrip + " day(s)")
-                console.log("number of final things to fetch: ", finalBusinesses.length)
 
                 resolve(finalBusinesses)
             })

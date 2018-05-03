@@ -20,7 +20,6 @@ db = admin.firestore();
 
 app.use(cors({ origin: true }))
 
-
 /*
 Get teams when needed
  
