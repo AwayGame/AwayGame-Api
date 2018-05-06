@@ -34,9 +34,8 @@ getting there at 11:00am on Friday, the game is at 6:00pm and lasts until
     departureTime: "28 May 2018 15:00:00"
 }
 
-
 -----------------------------------------------------------
-    Thursday - Cleaning It All Up
+    Friday - Final Additions
 -----------------------------------------------------------
 
 - Pull data for average time games lasts and add it to itinerary
@@ -45,12 +44,6 @@ getting there at 11:00am on Friday, the game is at 6:00pm and lasts until
 - Account for time leaving and time getting there into
 itinerary
 - Make sure location is open with right hours
-
------------------------------------------------------------
-    Friday - Final Additions
------------------------------------------------------------
-
-- TBD
 
 
 -----------------------------------------------------------

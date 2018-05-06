@@ -63,8 +63,8 @@ app.post('/ticketmaster/searchForGames', (req, res) => {
 
 // Creates user's itinerary
 app.post('/createItinerary', (req, res) => {
-	ItineraryHelper.createItinerary(req.body).then(results => {
-		return res.send(results)
+	ItineraryHelper.createItinerary(req.body).then(itinerary => {
+		return res.send(itinerary)
 	}).catch(error => {
 		console.log("error: ", error)
 		return res.status(error.status).send({

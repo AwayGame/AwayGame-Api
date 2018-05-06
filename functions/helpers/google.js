@@ -1,26 +1,4 @@
 /**
- * googleMaps.places({
-  query: 'fast food',
-  language: 'en',
-  location: [-33.865, 151.038],
-  radius: 5000,
-  minprice: 1,
-  maxprice: 4,
-  opennow: true,
-  type: 'restaurant'
-})
-.asPromise()
-.then(function(response) {
-  expect(response.json.results).toEqual(
-      arrayContaining([
-        objectContaining({
-          name: stringMatching('McDonalds')
-        })
-      ]));
-})
- */
-
-/**
  * Google Helper
  *
  * This helper uses the Google Places API to find locations for the user
@@ -67,8 +45,6 @@ module.exports = {
  * 
  */
 
-
-
 function getBusinesses(urls) {
     let results = []
     let totalRequests = 0
@@ -81,12 +57,19 @@ function getBusinesses(urls) {
 
                 totalRequests++
                 if (totalRequests === urls.length) {
-                    //remove duplicates
-                    results = removeDuplicates(results, 'place_id')
+                    
+                    // Make sure there are enough results for each category
+                    
+                    let businessNames = []
+                    let businessIds = []
 
                     for (var i = 0; i < results.length; i++) {
-                        // Remove businesses with not enough data
-                        if (!results[i].opening_hours || !results[i].place_id || !results[i].price) results.splice(i, 1)
+                        if (businessNames.indexOf(results[i].name.trim()) > -1 && businessIds.indexOf(results[i].placeId > -1)) {
+                            results.splice(i, 1)
+                        } else {
+                            businessNames.push(results[i].name.trim())
+                            businessIds.push(results[i].place_id)
+                        }
                     }
 
                     return resolve(results)
@@ -119,17 +102,16 @@ function getBusinesses(urls) {
                             makeRequests(urlObject, results)
                         }, 1500)
                     } else {
+                        for (var i = 0; i < results.length; i++) {
+                            if (!results[i].opening_hours || !results[i].place_id || !results[i].price) {
+                                results.splice(i, 1)
+                            }
+                        }
                         return resolve(results)
                     }
                 })
             }
         })
-    }
-
-    function removeDuplicates(myArr, prop) {
-        return myArr.filter((obj, pos, arr) => {
-            return arr.map(mapObj => mapObj[prop]).indexOf(obj[prop]) === pos;
-        });
     }
 }
 
