@@ -33,22 +33,31 @@ module.exports = {
                 let initialListOfBusinesses = []
                 businessData.forEach(business => initialListOfBusinesses.push(...business))
 
-                let arrivalTime = moment(data.arrivalTime);
-                let departureTime = moment(data.departureTime);
-                // Todo: change to hours
-                let tripLengthInHours = departureTime.diff(arrivalTime, 'hours')
-                let tripLengthInDays = departureTime.diff(arrivalTime, 'days')
+                let arrivalDate = moment(data.arrivalTime);
+                let departureDate = moment(data.departureTime);
 
-                console.log("User is going for " + tripLengthInDays + " days(s)")
+                // Todo: change to hours
+                //let tripLengthInHours = departureTime.diff(arrivalDate, 'hours')
+                //let tripLengthInDays = departureDate.diff(arrivalTime, 'days')
+
+                let tripLengthInDays = []
+
+                while (arrivalDate.isBefore(departureDate)) {
+                    tripLengthInDays.push(new moment(arrivalDate.format()))
+                    arrivalDate.add(1, 'days');
+                }
+                tripLengthInDays.push(new moment(arrivalDate.format()))
+
+                console.log("User is going for " + tripLengthInDays.length + " days(s)")
 
                 // Filter our choices down based on user preference with multiple options
-                getListOfFinalBusinessesForUser(tripLengthInDays, initialListOfBusinesses).then(finalChoices => {
+                getListOfFinalBusinessesForUser(tripLengthInDays.length, initialListOfBusinesses).then(finalChoices => {
                     console.log("finalChoices length: ", finalChoices.length)
                     // Get more details for the user's businesses before we format the itinerary
                     getMoreDetails(finalChoices).then(finalBusinessData => {
                         console.log("got the details of the businesses")
                         let finalBusinesses = [...finalBusinessData[0]]
-                        formatItineraryFromBusinesses(arrivalTime, departureTime, finalBusinesses).then(itinerary => {
+                        formatItineraryFromBusinesses(tripLengthInDays, finalBusinesses).then(itinerary => {
                             return resolve(itinerary)
                         })
                     })
@@ -58,12 +67,11 @@ module.exports = {
 
         /**
          * This function creates the itinerary response object for the front end
-         * @param  {MomentJS Date}  arrivalDate     The arrival time of the user
-         * @param  {MomentJS Date}  departureDate   The departure time of the user
-         * @param  {Array}          businesses      The businesses and activities to use
-         * @return {Object}         itinerary       The user's itinerary
+         * @param  {Array}          tripLengthInDays        THe days the user is going on their trip
+         * @param  {Array}          businesses              The businesses and activities to use
+         * @return {Object}         itinerary               The user's itinerary
          */
-        function formatItineraryFromBusinesses(arrivalDate, departureDate, businesses) {
+        function formatItineraryFromBusinesses(tripLengthInDays, businesses) {
             return new Promise((resolve, reject) => {
                 console.log("Creating itinerary...")
                 // Format the businesses into an itinerary for the user
@@ -72,10 +80,12 @@ module.exports = {
 
                 let itinerary = {}
 
-                while (arrivalDate.isSameOrBefore(departureDate)) {
-                    itinerary[arrivalDate.format()] = getActivitiesForTheDay(businesses, arrivalDate)
-                    arrivalDate.add(1, 'days');
-                }
+                tripLengthInDays.forEach(day => {
+                    itinerary[day.format()] = getActivitiesAndBackupsForTheDay(businesses, day)
+                })
+
+                console.log("done!")
+                console.log("returning the itinerary")
 
                 return resolve(itinerary)
 
@@ -83,30 +93,47 @@ module.exports = {
                  * Formats a "day" object for the itinerary
                  * @return {Object} A full day of activities
                  */
-                function getActivitiesForTheDay(businesses, date) {
+                function getActivitiesAndBackupsForTheDay(businesses, date) {
                     let day = {}
 
-                    day['breakfast'] = getBusinessOpenAtAvailableTime('food', businesses, date.day(), 'breakfast')
+                    day['breakfast'] = getBusinessAndBackupOpenAtAvailableTime('food', businesses, date.day(), 'breakfast')
                     removeBusinesses(day['breakfast'])
-                    day['morningActivity'] = getBusinessOpenAtAvailableTime('day', businesses, date.day(), 'morningActivity')
+                    day['morningActivity'] = getBusinessAndBackupOpenAtAvailableTime('day', businesses, date.day(), 'morningActivity')
                     removeBusinesses(day['morningActivity'])
-                    day['lunch'] = getBusinessOpenAtAvailableTime('food', businesses, date.day(), 'lunch')
+                    day['lunch'] = getBusinessAndBackupOpenAtAvailableTime('food', businesses, date.day(), 'lunch')
                     removeBusinesses(day['lunch'])
-                    day['afternoonActivity'] = getBusinessOpenAtAvailableTime('day', businesses, date.day(), 'afternoonActivity')
+                    day['afternoonActivity'] = getBusinessAndBackupOpenAtAvailableTime('day', businesses, date.day(), 'afternoonActivity')
                     removeBusinesses(day['afternoonActivity'])
-                    day['dinner'] = getBusinessOpenAtAvailableTime('food', businesses, date.day(), 'dinner')
+                    day['dinner'] = getBusinessAndBackupOpenAtAvailableTime('food', businesses, date.day(), 'dinner')
                     removeBusinesses(day['dinner'])
-                    day['eveningActivity'] = getBusinessOpenAtAvailableTime('night', businesses, date.day(), 'eveningActivity')
+                    day['eveningActivity'] = getBusinessAndBackupOpenAtAvailableTime('night', businesses, date.day(), 'eveningActivity')
                     removeBusinesses(day['eveningActivity'])
+
+                    console.log("about to return the day")
 
                     return day
 
                     function removeBusinesses(businessToCheck) {
-                        businesses.forEach((business, index) => {
-                            if (business.placeId === businessToCheck.placeId || business.name === businessToCheck.name) {
-                                businesses.splice(index, 1)
-                            }
+                        console.log("removing backups for this business: ")
+                        let names = businessToCheck.backups.map(b => {
+                            return b.name
                         })
+                        names.push(businessToCheck.name)
+                        console.log("names length: ", names.length)
+
+                        let placeIds = businessToCheck.backups.map(b => {
+                            return b.placeId
+                        })
+                        placeIds.push(businessToCheck.placeId)
+                        console.log("placeIds length: ", placeIds.length)
+
+                        console.log("businesses length before: ", businesses.length)
+                        for (var i = 0; i < businesses.length; i++) {
+                            if (placeIds.indexOf(businesses[i].placeId) > -1 || names.indexOf(businesses[i].name) > -1) {
+                                businesses.splice(i, 1)
+                            }
+                        }
+                        console.log("businesses length after: ", businesses.length)
                     }
 
                     /**
@@ -116,7 +143,10 @@ module.exports = {
                      * @param  {Int}.       The time as an int that the business has to be open at
                      * @return {Boolean}    True/False if it is open
                      */
-                    function getBusinessOpenAtAvailableTime(category, businesses, day, time) {
+                    function getBusinessAndBackupOpenAtAvailableTime(category, businesses, day, time) {
+                        console.log("\n\ngetting activities for category " + category + " on day " + day + "...")
+                        let foundBusinesses = []
+
                         for (var i = 0; i < businesses.length; i++) {
                             let business = businesses[i]
                             if (business.hours.individualDaysData) {
@@ -124,7 +154,13 @@ module.exports = {
                                     let businessDay = business.hours.individualDaysData[j]
                                     // If the business matches the category we are looking for and it opens before our starting time, then add it
                                     if (business.category === category && businessDay.open.day === day && businessIsOpenOnTime(businessDay, TIMES[time])) {
-                                        return business
+                                        foundBusinesses.push(business)
+                                        console.log("foundBusinesses length now...", foundBusinesses.length)
+                                        if (foundBusinesses.length === 3) {
+                                            let finalBusiness = foundBusinesses[0]
+                                            finalBusiness.backups = [foundBusinesses[1], foundBusinesses[2]]
+                                            return finalBusiness
+                                        }
                                     }
                                 }
                             }
@@ -180,13 +216,13 @@ module.exports = {
 
                 // For each day, get three options - one main, and two backups
                 let finalBusinesses = []
-            
+
                 Object.keys(data).forEach(category => {
                     Object.keys(data[category]).forEach(subcategory => {
                         let start = 0
                         let end = (numberOfDaysInTrip * DAILY_PREFERENCE_COUNT[category] * 3)
-                        
-                        if(data[category][subcategory].length <= end) {
+
+                        if (data[category][subcategory].length <= end) {
                             finalBusinesses = finalBusinesses.concat(data[category][subcategory])
                         } else {
                             finalBusinesses = finalBusinesses.concat(data[category][subcategory].slice(start, end))
