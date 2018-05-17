@@ -19,19 +19,33 @@ const DAILY_PREFERENCE_COUNT = {
 
 module.exports = {
     /**
-     * Creates the user's itinerary by reaching out to our partners
+     * Creates the user's trip by reaching out to our partners
      * and finding activities, travel options, bookings, etc
      * @param  {Object} The data passed up from the client
-     * @return {Object} The user's itinerary
+     * @return {Object} The user's trip
      */
-    createItinerary: (data) => {
+    createTrip: (data) => {
         return new Promise((resolve, reject) => {
+
+            console.log("data: ", data)
+            let arrivalDate = moment(data.arrivalTime);
+            let departureDate = moment(data.departureTime);
+            let tripLengthInHours = departureDate.diff(arrivalDate, 'hours')
+            let tripLengthInDays = departureDate.diff(arrivalDate, 'days')
+            let totalDays = departureDate.diff(arrivalDate, 'days')
+            let remainingHours = tripLengthInHours - (24 * totalDays)
+            console.log("trip length is " + totalDays + " day(s) and " + remainingHours + " hour(s)")
+
+
             let categories = []
             // Get a list of businesses that we can filter and sort
             // through before getting more details
             getListOfBusinessesFromProviders(data).then(businessData => {
                 let initialListOfBusinesses = []
-                businessData.forEach(business => initialListOfBusinesses.push(...business))
+
+                for (var i = 0; i < businessData.length; i++) {
+                    initialListOfBusinesses.push(...businessData[i])
+                }
 
                 let arrivalDate = moment(data.arrivalTime);
                 let departureDate = moment(data.departureTime);
@@ -53,12 +67,12 @@ module.exports = {
                 // Filter our choices down based on user preference with multiple options
                 getListOfFinalBusinessesForUser(tripLengthInDays.length, initialListOfBusinesses).then(finalChoices => {
                     console.log("finalChoices length: ", finalChoices.length)
-                    // Get more details for the user's businesses before we format the itinerary
+                    // Get more details for the user's businesses before we format the trip
                     getMoreDetails(finalChoices).then(finalBusinessData => {
                         console.log("got the details of the businesses")
                         let finalBusinesses = [...finalBusinessData[0]]
-                        formatItineraryFromBusinesses(tripLengthInDays, finalBusinesses).then(itinerary => {
-                            return resolve(itinerary)
+                        formatTripFromBusinesses(tripLengthInDays, finalBusinesses).then(trip => {
+                            return resolve(trip)
                         })
                     })
                 })
@@ -66,31 +80,31 @@ module.exports = {
         })
 
         /**
-         * This function creates the itinerary response object for the front end
+         * This function creates the trip response object for the front end
          * @param  {Array}          tripLengthInDays        THe days the user is going on their trip
          * @param  {Array}          businesses              The businesses and activities to use
-         * @return {Object}         itinerary               The user's itinerary
+         * @return {Object}         trip               The user's trip
          */
-        function formatItineraryFromBusinesses(tripLengthInDays, businesses) {
+        function formatTripFromBusinesses(tripLengthInDays, businesses) {
             return new Promise((resolve, reject) => {
-                console.log("Creating itinerary...")
-                // Format the businesses into an itinerary for the user
+                console.log("Creating trip...")
+                // Format the businesses into an trip for the user
                 // Each key is a day in the user's trip, with the times
                 // listed out as keys as well
 
-                let itinerary = {}
+                let trip = {}
 
-                tripLengthInDays.forEach(day => {
-                    itinerary[day.format()] = getActivitiesAndBackupsForTheDay(businesses, day)
-                })
+                for (var i = 0; i < tripLengthInDays.length; i++) {
+                    trip[tripLengthInDays[i].format()] = getActivitiesAndBackupsForTheDay(businesses, tripLengthInDays[i])
+                }
 
                 console.log("done!")
-                console.log("returning the itinerary")
+                console.log("returning the trip")
 
-                return resolve(itinerary)
+                return resolve(trip)
 
                 /**
-                 * Formats a "day" object for the itinerary
+                 * Formats a "day" object for the trip
                  * @return {Object} A full day of activities
                  */
                 function getActivitiesAndBackupsForTheDay(businesses, date) {
@@ -114,10 +128,16 @@ module.exports = {
                     return day
 
                     function removeBusinesses(businessToCheck) {
-                        console.log("removing backups for this business: ")
-                        let names = businessToCheck.backups.map(b => {
-                            return b.name
-                        })
+                        console.log("removing backups for this business: ", businessToCheck)
+                        let names = null
+                        if (!businessToCheck.backups) {
+                            names = []
+                        } else {
+                            names = businessToCheck.backups.map(b => {
+                                return b.name
+                            })
+                        }
+
                         names.push(businessToCheck.name)
                         console.log("names length: ", names.length)
 
@@ -155,7 +175,7 @@ module.exports = {
                                     // If the business matches the category we are looking for and it opens before our starting time, then add it
                                     if (business.category === category && businessDay.open.day === day && businessIsOpenOnTime(businessDay, TIMES[time])) {
                                         foundBusinesses.push(business)
-                                        console.log("foundBusinesses length now...", foundBusinesses.length)
+                                        console.log("added one...")
                                         if (foundBusinesses.length === 3) {
                                             let finalBusiness = foundBusinesses[0]
                                             finalBusiness.backups = [foundBusinesses[1], foundBusinesses[2]]
@@ -202,7 +222,9 @@ module.exports = {
                 // we can get the best options for the user
 
                 let data = {}
-                businesses.forEach(business => {
+
+                for (var i = 0; i < businesses.length; i++) {
+                    let business = businesses[i]
                     if (!data[business.category]) {
                         data[business.category] = {}
                     }
@@ -212,13 +234,17 @@ module.exports = {
                     }
 
                     data[business.category][business.subcategory].push(business)
-                })
+                }
 
                 // For each day, get three options - one main, and two backups
                 let finalBusinesses = []
 
-                Object.keys(data).forEach(category => {
-                    Object.keys(data[category]).forEach(subcategory => {
+                // for each category
+                for (var i = 0; i < Object.keys(data).length; i++) {
+                    let category = Object.keys(data)[i]
+                    // for each subcategory
+                    for (var j = 0; j < Object.keys(data[category]).length; j++) {
+                        let subcategory = Object.keys(data[category])[j]
                         let start = 0
                         let end = (numberOfDaysInTrip * DAILY_PREFERENCE_COUNT[category] * 3)
 
@@ -227,8 +253,9 @@ module.exports = {
                         } else {
                             finalBusinesses = finalBusinesses.concat(data[category][subcategory].slice(start, end))
                         }
-                    })
-                })
+                    }
+
+                }
 
                 resolve(finalBusinesses)
             })

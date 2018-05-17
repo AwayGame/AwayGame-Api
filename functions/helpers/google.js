@@ -57,9 +57,9 @@ function getBusinesses(urls) {
 
                 totalRequests++
                 if (totalRequests === urls.length) {
-                    
+
                     // Make sure there are enough results for each category
-                    
+
                     let businessNames = []
                     let businessIds = []
 
@@ -248,7 +248,12 @@ function getBusinessesInMoreDetail(businesses) {
             return {
                 lat: business.geometry.location.lat,
                 long: business.geometry.location.lng,
-                mapsUrl: business.url
+                mapsUrl: formatMapsUrl(business.geometry.location.lat, business.geometry.location.lng)
+            }
+
+            function formatMapsUrl(lat, lng) {
+                let latLngStr = lat + "," + lng
+                return "https://maps.googleapis.com/maps/api/staticmap?center=" + latLngStr + "&markers=color:0x82CA75|" + latLngStr + "&zoom=15&size=300x150&scale=2&key=" + config.google.mapStaticApiKey
             }
         }
 
