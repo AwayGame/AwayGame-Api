@@ -1,6 +1,7 @@
-var helpers = require('./helpers')
-var GoogleHelper = require('./google')
-var moment = require('moment')
+const helpers = require('./helpers')
+const GoogleHelper = require('./google')
+const YelpHelper = require('./yelp')
+const moment = require('moment')
 
 const TIMES = {
     'breakfast': 500,
@@ -26,8 +27,6 @@ module.exports = {
      */
     createTrip: (data) => {
         return new Promise((resolve, reject) => {
-
-            console.log("data: ", data)
             let arrivalDate = moment(data.arrivalTime);
             let departureDate = moment(data.departureTime);
             let tripLengthInHours = departureDate.diff(arrivalDate, 'hours')
@@ -47,30 +46,18 @@ module.exports = {
                     initialListOfBusinesses.push(...businessData[i])
                 }
 
-                let arrivalDate = moment(data.arrivalTime);
-                let departureDate = moment(data.departureTime);
-
-                // Todo: change to hours
-                //let tripLengthInHours = departureTime.diff(arrivalDate, 'hours')
-                //let tripLengthInDays = departureDate.diff(arrivalTime, 'days')
-
-                let tripLengthInDays = []
-
-                while (arrivalDate.isBefore(departureDate)) {
-                    tripLengthInDays.push(new moment(arrivalDate.format()))
-                    arrivalDate.add(1, 'days');
-                }
-                tripLengthInDays.push(new moment(arrivalDate.format()))
-
-                console.log("User is going for " + tripLengthInDays.length + " days(s)")
-
+                // Remove duplicates
+                initialListOfBusinesses = helpers.removeDuplicates(initialListOfBusinesses, 'id')
+                initialListOfBusinesses = helpers.removeDuplicates(initialListOfBusinesses, 'name')
+                // Sort by user preferences
+                initialListOfBusinesses = sortByUserPreferenceAndRemoveBusinessesWithoutRequiredParameters(initialListOfBusinesses, data.preferences)
                 // Filter our choices down based on user preference with multiple options
-                getListOfFinalBusinessesForUser(tripLengthInDays.length, initialListOfBusinesses).then(finalChoices => {
-                    console.log("finalChoices length: ", finalChoices.length)
+                getListOfFinalBusinessesForUser(tripLengthInDays, initialListOfBusinesses).then(finalChoices => {
                     // Get more details for the user's businesses before we format the trip
-                    getMoreDetails(finalChoices).then(finalBusinessData => {
-                        console.log("got the details of the businesses")
+                    console.log("Getting details for this many: ", finalChoices.length)
+                    getMoreDetails(finalChoices).then(finalBusinessData => {             
                         let finalBusinesses = [...finalBusinessData[0]]
+                        return resolve(finalBusinesses)
                         formatTripFromBusinesses(tripLengthInDays, finalBusinesses).then(trip => {
                             return resolve(trip)
                         })
@@ -213,11 +200,6 @@ module.exports = {
          */
         function getListOfFinalBusinessesForUser(numberOfDaysInTrip, businesses) {
             return new Promise((resolve, reject) => {
-                // Sort the businesses by rating, then get more details
-                businesses = businesses.sort(function(a, b) {
-                    return b.rating - a.rating
-                });
-
                 // Create an object with each category and subcategory, so that
                 // we can get the best options for the user
 
@@ -260,26 +242,60 @@ module.exports = {
                 resolve(finalBusinesses)
             })
         }
-
-
-        /**
-         * Finds businesses from our providers - this function is 
-         * a stub that call all of our helpers
-         */
-        function getListOfBusinessesFromProviders(data) {
-            return new Promise((resolve, reject) => {
-                Promise.all([GoogleHelper.findBusinesses(data)]).then(businesses => {
-                    return resolve(businesses)
-                })
-            })
-        }
-
-        function getMoreDetails(businesses) {
-            return new Promise((resolve, reject) => {
-                Promise.all([GoogleHelper.getMoreDetails(businesses)]).then(businesses => {
-                    return resolve(businesses)
-                })
-            })
-        }
     }
+}
+
+
+/**
+ * Finds businesses from our providers - this function is 
+ * a stub that call all of our helpers
+ */
+function getListOfBusinessesFromProviders(data) {
+    return new Promise((resolve, reject) => {
+        let listOfCalls = []
+        Promise.all([
+            //GoogleHelper.findBusinesses(data),
+            YelpHelper.findBusinesses(data)
+        ]).then(businesses => {
+            return resolve(businesses)
+        })
+    })
+}
+
+function getMoreDetails(businesses) {
+    let data = {}
+    for (var i = 0; i < businesses.length; i++) {
+        if (!data[businesses[i].provider]) {
+            data[businesses[i].provider] = []
+        }
+        data[businesses[i].provider].push(businesses[i])
+    }
+
+    return new Promise((resolve, reject) => {
+        Promise.all([
+            //GoogleHelper.getMoreDetails(data['google']),
+            YelpHelper.getMoreDetails(data['yelp'])
+        ]).then(businesses => {
+            return resolve(businesses)
+        })
+    })
+}
+
+/**
+ * Sorts by the user's preferences
+ * @param  {Array}  businesses          The businesses to sort
+ * @param  {Object} preferences         The user's preferences that they entered in the app
+ * @return {Array}                      The sorted businesses
+ */
+function sortByUserPreferenceAndRemoveBusinessesWithoutRequiredParameters(businesses, preferences) {
+    // Remove businesses without time
+
+    // 
+
+
+    // For now, just sort by rating...
+    businesses = businesses.sort(function(a, b) {
+        return b.rating - a.rating
+    });
+    return businesses
 }

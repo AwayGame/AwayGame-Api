@@ -6,7 +6,7 @@
  */
 
 var helpers = require('./helpers')
-var googleMapsClient = require('@google/maps').createClient({
+var GoogleMapsClient = require('@google/maps').createClient({
     key: config.google.placesApiKey
 });
 
@@ -22,14 +22,14 @@ module.exports = {
      */
     findBusinesses: (data) => {
         return new Promise((resolve, reject) => {
-            // Get the three URLS
-            let urls = [...getBusinessUrls('food', data), ...getBusinessUrls('day', data), ...getBusinessUrls('night', data)]
-            getBusinesses(urls).then((businesses) => {
+            let queryObjects = [...getQueryData('food', data), ...getQueryData('day', data), ...getQueryData('night', data)]
+            getBusinesses(queryObjects).then((businesses) => {
                 return resolve(businesses)
             })
         })
     },
     getMoreDetails: (businesses) => {
+        console.log("in Google. Getting more details for this many: ", businesses.length)
         return new Promise((resolve, reject) => {
             getBusinessesInMoreDetail(businesses).then(detailedBusinesses => {
                 return resolve(detailedBusinesses)
@@ -45,69 +45,53 @@ module.exports = {
  * 
  */
 
-function getBusinesses(urls) {
+function getBusinesses(queryObjects) {
     let results = []
     let totalRequests = 0
     return new Promise((resolve, reject) => {
-        urls.forEach(urlObject => {
-            getBusinessesFromGoogle(urlObject).then(response => {
+        queryObjects.forEach(queryObject => {
+            getBusinessesFromGoogle(queryObject).then(response => {
                 response.forEach(result => {
+                    result.id = result.place_id
                     results.push(result)
                 })
 
                 totalRequests++
-                if (totalRequests === urls.length) {
-
-                    // Make sure there are enough results for each category
-
-                    let businessNames = []
-                    let businessIds = []
-
-                    for (var i = 0; i < results.length; i++) {
-                        if (businessNames.indexOf(results[i].name.trim()) > -1 && businessIds.indexOf(results[i].placeId > -1)) {
-                            results.splice(i, 1)
-                        } else {
-                            businessNames.push(results[i].name.trim())
-                            businessIds.push(results[i].place_id)
-                        }
-                    }
-
+                if (totalRequests === queryObjects.length) {
+                    results = helpers.removeDuplicates(results, 'name')
+                    results = helpers.removeDuplicates(results, 'place_id')
+                    results = helpers.addProvider(results, 'google')
                     return resolve(results)
                 }
             })
         })
     })
 
-    function getBusinessesFromGoogle(obj) {
+    function getBusinessesFromGoogle(queryObject) {
         return new Promise((resolve, reject) => {
             let results = []
 
-            makeRequests(obj, results)
+            makeRequests(queryObject, results)
 
-            function makeRequests(urlObject, results) {
-                rp({
-                    method: "GET",
-                    uri: urlObject.url,
-                    json: true
-                }).then(function(response) {
-                    response.results.forEach(business => {
-                        business.category = urlObject.category
-                        business.subcategory = urlObject.subcategory
-                        results.push(business)
-                    })
+            function makeRequests(googleRequestObject, results) {
+                GoogleMapsClient.places(googleRequestObject.data, function(err, response) {
+                    if (!err) {
+                        response.json.results.forEach(business => {
+                            business.category = googleRequestObject.category
+                            business.subcategory = googleRequestObject.subcategory
+                            results.push(business)
+                        })
 
-                    if (response.next_page_token) {
-                        urlObject.url = urlObject.url.split('&pagetoken=')[0] + '&pagetoken=' + response.next_page_token
-                        setTimeout(function() {
-                            makeRequests(urlObject, results)
-                        }, 1500)
-                    } else {
-                        for (var i = 0; i < results.length; i++) {
-                            if (!results[i].opening_hours || !results[i].place_id || !results[i].price) {
-                                results.splice(i, 1)
-                            }
+                        if (response.json.next_page_token) {
+                            googleRequestObject.data.pagetoken = response.json.next_page_token
+                            setTimeout(function() {
+                                makeRequests(googleRequestObject, results)
+                            }, 2500)
+                        } else {
+                            return resolve(results)
                         }
-                        return resolve(results)
+                    } else {
+                        console.log("we got an error...: ", err)
                     }
                 })
             }
@@ -115,46 +99,45 @@ function getBusinesses(urls) {
     }
 }
 
-/**
- * Creates the initial search URL to activities, food, etc. for the user
- * @param  type {String} The type of url to get
- * @param  data {Object} The data passed in from the application
- * @return {String} The URL to make the request to
- */
-function getBusinessUrls(type, data) {
-    // Set up base URL
-    let baseUrl = setUpUrl(data)
+function getQueryData(type, data) {
+    let baseObject = {
+        location: [data.lat, data.long],
+        radius: helpers.milesToRadius(data.radius),
+        language: 'en'
+    }
 
     switch (type) {
         case 'food':
-            return formatFoodUrlAndAddCategories(baseUrl)
+            return formatFoodObject(baseObject)
             break;
         case 'day':
-            return formatDayUrlAndAddCategories(baseUrl)
+            return formatDayObject(baseObject)
             break;
         case 'night':
-            return handleNightUrlAndAddCategories(baseUrl)
+            return formatNightObject(baseObject)
             break;
     }
 
-    function formatFoodUrlAndAddCategories(baseUrl) {
+    function formatFoodObject(baseObject) {
         return data.preferences.food.map(preference => {
-            let url = baseUrl
-            url += '&type=restaurant&keyword=' + config.google.foodCategories[preference]
+            let objToReturn = baseObject
+            objToReturn.type = 'restaurant'
+            objToReturn.query = config.google.foodCategories[preference]
+
             return {
-                url: url,
+                data: objToReturn,
                 category: 'food',
                 subcategory: preference
             }
         })
     }
 
-    function formatDayUrlAndAddCategories(baseUrl) {
+    function formatDayObject(baseObject) {
         return data.preferences.dayActivities.map(preference => {
-            let url = baseUrl
-            url += '&keyword=' + config.google.dayActivities[preference]
+            let objToReturn = baseObject
+            objToReturn.query = config.google.dayActivities[preference]
             return {
-                url: url,
+                data: objToReturn,
                 category: 'day',
                 subcategory: preference
             }
@@ -162,27 +145,16 @@ function getBusinessUrls(type, data) {
 
     }
 
-    function handleNightUrlAndAddCategories(baseUrl) {
+    function formatNightObject(baseObject) {
         return data.preferences.nightActivities.map(preference => {
-            let url = baseUrl
-            url += '&keyword=' + config.google.nightActivities[preference]
+            let objToReturn = baseObject
+            objToReturn.query = config.google.nightActivities[preference]
             return {
-                url: url,
+                data: objToReturn,
                 category: 'night',
                 subcategory: preference
             }
         })
-    }
-
-    function setUpUrl(data) {
-        let url = config.google.findNearbyBusinessesUrl;
-        // Add stadium location
-        url += 'location=' + data.lat + ',' + data.long
-        // Add radius from stadium
-        url += '&radius=' + helpers.milesToRadius(data.radius)
-        // Add API key
-        url += '&key=' + config.google.placesApiKey
-        return url
     }
 }
 
