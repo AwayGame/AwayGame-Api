@@ -52,8 +52,10 @@ function searchForBusinesses(data) {
                     latitude: data.lat,
                     longitude: data.long,
                     sortBy: 'rating',
+                    limit: 50,
                     radius: helpers.milesToRadius(data.radius)
                 }).then(response => {
+                    console.log("just got " + response.jsonBody.businesses.length + " businessess...")
                     response.jsonBody.businesses.forEach(business => {
                         if (category === 'dayActivities') {
                             business.category = category
@@ -69,6 +71,7 @@ function searchForBusinesses(data) {
 
                     finalResults = finalResults.concat(response.jsonBody.businesses)
                     searches++
+
                     if (searches === totalCategories) {
                         finalResults = helpers.removeDuplicates(finalResults, 'id')
                         finalResults = helpers.addProvider(finalResults, 'yelp')
@@ -116,7 +119,7 @@ function getBusinessesInMoreDetail(businesses) {
                     callback()
                 }
             })
-        }, 2);
+        }, 1);
 
         businesses.forEach(business => q.push(business))
 
@@ -189,8 +192,40 @@ function getBusinessesInMoreDetail(businesses) {
         function getHours(business) {
             return {
                 formattedHours: getFormattedHours(business.hours[0].open),
-                individualDaysData: business.hours[0].open
+                individualDaysData: formatTime(business.hours[0].open)
             }
+        }
+
+        function formatTime(times) {
+            let newTimes = []
+
+            for (var day of times) {
+                if (day.is_overnight) {
+                    newTimes.push({
+                        close: {
+                            day: (day.day === 6) ? 0 : (day.day + 1),
+                            time: day.end
+                        },
+                        open: {
+                            day: day.day,
+                            time: day.start
+                        }
+                    })
+                } else {
+                    newTimes.push({
+                        close: {
+                            day: day.day,
+                            time: day.end
+                        },
+                        open: {
+                            day: day.day,
+                            time: day.start
+                        }
+                    })
+                }
+            }
+
+            return newTimes
         }
 
         /**

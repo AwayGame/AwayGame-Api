@@ -2,6 +2,7 @@ const helpers = require('./helpers')
 const GoogleHelper = require('./google')
 const YelpHelper = require('./yelp')
 const moment = require('moment')
+const _ = require('underscore')
 
 const TIMES = {
     'breakfast': 500,
@@ -14,9 +15,31 @@ const TIMES = {
 
 const DAILY_PREFERENCE_COUNT = {
     'food': 3,
-    'day': 2,
-    'night': 1
+    'dayActivities': 2,
+    'nightActivities': 1
 }
+
+const ACTIVITIES = [{
+        subactivity: 'breakfast',
+        activity: 'food'
+    }, {
+        subactivity: 'morningActivity',
+        activity: 'day'
+    }, {
+        subactivity: 'lunch',
+        activity: 'food'
+    }, {
+        subactivity: 'afternoonActivity',
+        activity: 'day'
+    },
+    {
+        subactivity: 'dinner',
+        activity: 'food'
+    }, {
+        subactivity: 'eveningActivity',
+        activity: 'night'
+    }
+]
 
 module.exports = {
     /**
@@ -30,11 +53,16 @@ module.exports = {
             let arrivalDate = moment(data.arrivalTime);
             let departureDate = moment(data.departureTime);
             let tripLengthInHours = departureDate.diff(arrivalDate, 'hours')
-            let tripLengthInDays = departureDate.diff(arrivalDate, 'days')
             let totalDays = departureDate.diff(arrivalDate, 'days')
             let remainingHours = tripLengthInHours - (24 * totalDays)
+            let formattedTripDates = []
             console.log("trip length is " + totalDays + " day(s) and " + remainingHours + " hour(s)")
 
+
+            while (arrivalDate.isBefore(departureDate)) {
+                formattedTripDates.push(new moment(arrivalDate.format()))
+                arrivalDate.add(1, 'days');
+            }
 
             let categories = []
             // Get a list of businesses that we can filter and sort
@@ -46,19 +74,27 @@ module.exports = {
                     initialListOfBusinesses.push(...businessData[i])
                 }
 
+                console.log("this many total: ", initialListOfBusinesses.length)
                 // Remove duplicates
+                console.log("removing duplicates by id in trip js...")
                 initialListOfBusinesses = helpers.removeDuplicates(initialListOfBusinesses, 'id')
+                console.log("this many total: ", initialListOfBusinesses.length)
+                console.log("removing duplicates by name...")
                 initialListOfBusinesses = helpers.removeDuplicates(initialListOfBusinesses, 'name')
+                console.log("this many total: ", initialListOfBusinesses.length)
                 // Sort by user preferences
                 initialListOfBusinesses = sortByUserPreferenceAndRemoveBusinessesWithoutRequiredParameters(initialListOfBusinesses, data.preferences)
                 // Filter our choices down based on user preference with multiple options
-                getListOfFinalBusinessesForUser(tripLengthInDays, initialListOfBusinesses).then(finalChoices => {
+                getListOfFinalBusinessesForUser(formattedTripDates.length, initialListOfBusinesses).then(finalChoices => {
                     // Get more details for the user's businesses before we format the trip
                     console.log("Getting details for this many: ", finalChoices.length)
-                    getMoreDetails(finalChoices).then(finalBusinessData => {             
-                        let finalBusinesses = [...finalBusinessData[0]]
-                        return resolve(finalBusinesses)
-                        formatTripFromBusinesses(tripLengthInDays, finalBusinesses).then(trip => {
+                    getMoreDetails(finalChoices).then(finalBusinessData => {
+                        let finalBusinesses = []
+                        for (var i = 0; i < finalBusinessData.length; i++) {
+                            finalBusinesses.push(...finalBusinessData[i])
+                        }
+
+                        formatTripFromBusinesses(formattedTripDates, finalBusinesses).then(trip => {
                             return resolve(trip)
                         })
                     })
@@ -70,7 +106,7 @@ module.exports = {
          * This function creates the trip response object for the front end
          * @param  {Array}          tripLengthInDays        THe days the user is going on their trip
          * @param  {Array}          businesses              The businesses and activities to use
-         * @return {Object}         trip               The user's trip
+         * @return {Object}         trip                    The user's trip
          */
         function formatTripFromBusinesses(tripLengthInDays, businesses) {
             return new Promise((resolve, reject) => {
@@ -97,51 +133,14 @@ module.exports = {
                 function getActivitiesAndBackupsForTheDay(businesses, date) {
                     let day = {}
 
-                    day['breakfast'] = getBusinessAndBackupOpenAtAvailableTime('food', businesses, date.day(), 'breakfast')
-                    removeBusinesses(day['breakfast'])
-                    day['morningActivity'] = getBusinessAndBackupOpenAtAvailableTime('day', businesses, date.day(), 'morningActivity')
-                    removeBusinesses(day['morningActivity'])
-                    day['lunch'] = getBusinessAndBackupOpenAtAvailableTime('food', businesses, date.day(), 'lunch')
-                    removeBusinesses(day['lunch'])
-                    day['afternoonActivity'] = getBusinessAndBackupOpenAtAvailableTime('day', businesses, date.day(), 'afternoonActivity')
-                    removeBusinesses(day['afternoonActivity'])
-                    day['dinner'] = getBusinessAndBackupOpenAtAvailableTime('food', businesses, date.day(), 'dinner')
-                    removeBusinesses(day['dinner'])
-                    day['eveningActivity'] = getBusinessAndBackupOpenAtAvailableTime('night', businesses, date.day(), 'eveningActivity')
-                    removeBusinesses(day['eveningActivity'])
+                    ACTIVITIES.forEach(activity => {
+                        day[activity.subactivity] = getBusinessAndBackupOpenAtAvailableTime(activity.activity, businesses, date.day(), activity.subactivity)
+                    })
 
                     console.log("about to return the day")
 
                     return day
 
-                    function removeBusinesses(businessToCheck) {
-                        console.log("removing backups for this business: ", businessToCheck)
-                        let names = null
-                        if (!businessToCheck.backups) {
-                            names = []
-                        } else {
-                            names = businessToCheck.backups.map(b => {
-                                return b.name
-                            })
-                        }
-
-                        names.push(businessToCheck.name)
-                        console.log("names length: ", names.length)
-
-                        let placeIds = businessToCheck.backups.map(b => {
-                            return b.placeId
-                        })
-                        placeIds.push(businessToCheck.placeId)
-                        console.log("placeIds length: ", placeIds.length)
-
-                        console.log("businesses length before: ", businesses.length)
-                        for (var i = 0; i < businesses.length; i++) {
-                            if (placeIds.indexOf(businesses[i].placeId) > -1 || names.indexOf(businesses[i].name) > -1) {
-                                businesses.splice(i, 1)
-                            }
-                        }
-                        console.log("businesses length after: ", businesses.length)
-                    }
 
                     /**
                      * Determines if a business is open and in an available time for the user
@@ -151,26 +150,27 @@ module.exports = {
                      * @return {Boolean}    True/False if it is open
                      */
                     function getBusinessAndBackupOpenAtAvailableTime(category, businesses, day, time) {
-                        console.log("\n\ngetting activities for category " + category + " on day " + day + "...")
                         let foundBusinesses = []
 
                         for (var i = 0; i < businesses.length; i++) {
                             let business = businesses[i]
-                            if (business.hours.individualDaysData) {
-                                for (var j = 0; j < business.hours.individualDaysData.length; j++) {
-                                    let businessDay = business.hours.individualDaysData[j]
-                                    // If the business matches the category we are looking for and it opens before our starting time, then add it
-                                    if (business.category === category && businessDay.open.day === day && businessIsOpenOnTime(businessDay, TIMES[time])) {
-                                        foundBusinesses.push(business)
-                                        console.log("added one...")
-                                        if (foundBusinesses.length === 3) {
-                                            let finalBusiness = foundBusinesses[0]
-                                            finalBusiness.backups = [foundBusinesses[1], foundBusinesses[2]]
-                                            return finalBusiness
-                                        }
+                            for (var j = 0; j < business.hours.individualDaysData.length; j++) {
+                                let businessDay = business.hours.individualDaysData[j]
+                                if (validBusiness(foundBusinesses, business, category, businesses, businessDay, day, time)) {
+                                    foundBusinesses.push(business)
+                                    console.log("added one...")
+                                    if (foundBusinesses.length === 3) {
+                                        let finalBusiness = foundBusinesses[0]
+                                        finalBusiness.backups = [foundBusinesses[1], foundBusinesses[2]]
+                                        return finalBusiness
                                     }
                                 }
                             }
+                        }
+
+
+                        function validBusiness(foundBusinesses, business, category, businesses, businessDay, day, time) {
+                            return (_.findWhere(foundBusinesses, business) == null && business.category === category && businessDay.open.day === day && businessIsOpenOnTime(business, TIMES[time]))
                         }
 
                         function businessIsOpenOnTime(businessDay, time) {
@@ -202,7 +202,6 @@ module.exports = {
             return new Promise((resolve, reject) => {
                 // Create an object with each category and subcategory, so that
                 // we can get the best options for the user
-
                 let data = {}
 
                 for (var i = 0; i < businesses.length; i++) {
@@ -288,11 +287,6 @@ function getMoreDetails(businesses) {
  * @return {Array}                      The sorted businesses
  */
 function sortByUserPreferenceAndRemoveBusinessesWithoutRequiredParameters(businesses, preferences) {
-    // Remove businesses without time
-
-    // 
-
-
     // For now, just sort by rating...
     businesses = businesses.sort(function(a, b) {
         return b.rating - a.rating
