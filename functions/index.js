@@ -16,7 +16,6 @@ const UserHelper = require('./helpers/user')
 // Load Middleware
 const Middleware = require('./middleware/index')
 
-
 // Initialize the app and database
 admin.initializeApp({
     credential: admin.credential.cert(config.appConfig),
@@ -39,7 +38,6 @@ app.get('/search/team/:term', (req, res) => {
     })
 });
 
-
 /**
  * TicketMaster endpoints
  */
@@ -57,11 +55,17 @@ app.post('/ticketmaster/searchForGames', (req, res) => {
 })
 
 /**
- * User endpoints
+ *
+ *  User Endpoints
+ *
+ *  These endpoints deal with user data in the database including:
+ *      1. Checking to see if a user exists
+ *      2. Adding a user to the database
+ *      3. Fetching a user from the database
  */
 
-app.get('/user/:id', (req, res) => {
-    UserHelper.getUserById(req.params.id).then(user => {
+app.post('/user/verify', (req, res) => {
+    UserHelper.verifyUser(req.body).then(user => {
         return res.send(user)
     }).catch(err => {
         return res.status(err.code).send(err.message)
@@ -73,11 +77,9 @@ app.get('/user/:id', (req, res) => {
  * Trip Endpoints
  */
 
-app.post('/createTrip', (req, res) => {
+app.post('/trip/createTrip', (req, res) => {
     TripHelper.createTrip(req.body).then(trip => {
-        return res.send({
-        	trip: trip
-        })
+        return res.send(trip)
     }).catch(error => {
         console.log("error: ", error)
         return res.status(error.status).send({

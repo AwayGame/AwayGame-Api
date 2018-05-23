@@ -24,8 +24,8 @@ module.exports = {
                     classificationName: "sports",
                     keyword: data.team,
                     sort: 'date,desc',
-                    startDateTime: helpers.formatDate(new Date(data.startDate)),
-                    endDateTime: helpers.formatDate(new Date(data.endDate))
+                    startDateTime: data.startDate,
+                    endDateTime: data.endDate
                 }
             }, function(err, response, body) {
                 if (err) {
