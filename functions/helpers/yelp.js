@@ -56,20 +56,23 @@ function searchForBusinesses(data) {
                     radius: helpers.milesToRadius(data.radius)
                 }).then(response => {
                     console.log("just got " + response.jsonBody.businesses.length + " businessess...")
-                    response.jsonBody.businesses.forEach(business => {
-                        if (category === 'dayActivities') {
-                            business.category = category
-                            business.subcategory = subcategory
-                        } else if (category === 'nightActivities') {
-                            business.category = category
-                            business.subcategory = subcategory
-                        } else if (category === 'food') {
-                            business.category = category
-                            business.subcategory = subcategory
-                        }
-                    })
+                    if(response.jsonBody.businesses.length) {
+                        response.jsonBody.businesses.forEach(business => {
+                            if (category === 'dayActivities') {
+                                business.category = category
+                                business.subcategory = subcategory
+                            } else if (category === 'nightActivities') {
+                                business.category = category
+                                business.subcategory = subcategory
+                            } else if (category === 'food') {
+                                business.category = category
+                                business.subcategory = subcategory
+                            }
+                        })
 
-                    finalResults = finalResults.concat(response.jsonBody.businesses)
+                        finalResults = finalResults.concat(response.jsonBody.businesses)
+                    }
+
                     searches++
 
                     if (searches === totalCategories) {
@@ -107,6 +110,8 @@ function searchForBusinesses(data) {
 
 function getBusinessesInMoreDetail(businesses) {
     return new Promise((resolve, reject) => {
+        if(!businesses || !businesses.length) return resolve([])
+        
         let detailedResults = []
         let q = queue(function(task, callback) {
             getBusiness(task.id).then(function(result) {

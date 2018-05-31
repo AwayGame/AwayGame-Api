@@ -59,7 +59,7 @@ module.exports = {
             function createNewUser(data) {
                 return new Promise((resolve, reject) => {
                     data.tripIds = []
-                    data.preferences = {}
+                    data.settings = {}
                     db.collection('user').doc(data.uid)
                         .set(data)
                         .then(user => {

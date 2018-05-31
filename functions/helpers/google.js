@@ -103,7 +103,8 @@ function getQueryData(type, data) {
     let baseObject = {
         location: [data.lat, data.long],
         radius: helpers.milesToRadius(data.radius),
-        language: 'en'
+        language: 'en',
+        opennow: true
     }
 
     switch (type) {

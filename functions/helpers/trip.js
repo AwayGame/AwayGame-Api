@@ -15,8 +15,8 @@ const TIMES = {
 
 const DAILY_PREFERENCE_COUNT = {
     'food': 3,
-    'dayActivities': 2,
-    'nightActivities': 1
+    'day': 2,
+    'night': 1
 }
 
 const ACTIVITIES = [{
@@ -107,6 +107,7 @@ module.exports = {
         function formatTripFromBusinesses(tripLengthInDays, businesses) {
             return new Promise((resolve, reject) => {
                 console.log("Creating trip...")
+
                 // Format the businesses into an trip for the user
                 // Each key is a day in the user's trip, with the times
                 // listed out as keys as well
@@ -129,20 +130,16 @@ module.exports = {
                 function getActivitiesAndBackupsForTheDay(businesses, date) {
                     let day = {}
 
-                    ACTIVITIES.forEach(activity => {
+                    for (var i = 0; i < ACTIVITIES.length; i++) {
+                        let activity = ACTIVITIES[i]
                         let data = getBusinessAndBackupOpenAtAvailableTime(activity.activity, businesses, date.day(), activity.subactivity)
                         if (data) {
-                            console.log("got data...")
-                            day[activity.subactivity] = data.finalBusinesses
-                            console.log("data.ids: ", data.ids)
-                            for (var i = 0; i < businesses.length; i++) {
-                                if (data.ids.indexOf(businesses[i].id) > -1) {
-                                    console.log("removing this...")
-                                    businesses.splice(i, 1)
-                                }
-                            }
+                            day[activity.subactivity] = data.activity
+                            businesses = _(businesses).filter(function(b) {
+                                return !data.foundBusinesses.includes(b)
+                            });
                         }
-                    })
+                    }
 
                     console.log("about to return the day")
 
@@ -153,7 +150,7 @@ module.exports = {
                      * Determines if a business is open and in an available time for the user
                      * @param  {Object}     The business we are comparing
                      * @param  {Int}        The day (0 - 6) that we need the business to be open on
-                     * @param  {Int}.       The time as an int that the business has to be open at
+                     * @param  {Int}        The time as an int that the business has to be open at
                      * @return {Boolean}    True/False if it is open
                      */
                     function getBusinessAndBackupOpenAtAvailableTime(category, businesses, day, time) {
@@ -165,21 +162,20 @@ module.exports = {
                                 let businessDay = business.hours.individualDaysData[j]
                                 if (validBusiness(foundBusinesses, business, category, businesses, businessDay, day, time)) {
                                     foundBusinesses.push(business)
-                                    if (foundBusinesses.length === 3) {
-                                        let finalBusinesses = foundBusinesses[0]
-                                        finalBusinesses.backups = [foundBusinesses[1], foundBusinesses[2]]
+                                    if (foundBusinesses.length >= 3) {
+                                        console.log("got here...")
+
+                                        let activityToReturn = foundBusinesses[0]
+                                        activityToReturn.backups = [foundBusinesses[1], foundBusinesses[2]]
 
                                         return {
-                                            finalBusinesses: finalBusinesses,
-                                            ids: foundBusinesses.map(b => {
-                                                return b.id
-                                            })
+                                            activity: activityToReturn,
+                                            foundBusinesses: foundBusinesses
                                         }
                                     }
                                 }
                             }
                         }
-
 
                         function validBusiness(foundBusinesses, business, category, businesses, businessDay, day, time) {
                             return (_.findWhere(foundBusinesses, business) == null && business.category === category && businessDay.open.day === day && businessIsOpenOnTime(businessDay, TIMES[time]))
@@ -245,7 +241,7 @@ module.exports = {
                     for (var j = 0; j < Object.keys(data[category]).length; j++) {
                         let subcategory = Object.keys(data[category])[j]
                         let start = 0
-                        let end = (numberOfDaysInTrip * DAILY_PREFERENCE_COUNT[category] * 3)
+                        let end = (numberOfDaysInTrip * DAILY_PREFERENCE_COUNT[category] * 4)
 
                         if (data[category][subcategory].length <= end) {
                             finalBusinesses = finalBusinesses.concat(data[category][subcategory])
@@ -253,7 +249,6 @@ module.exports = {
                             finalBusinesses = finalBusinesses.concat(data[category][subcategory].slice(start, end))
                         }
                     }
-
                 }
 
                 resolve(finalBusinesses)
@@ -270,7 +265,7 @@ module.exports = {
 function getListOfBusinessesFromProviders(data) {
     return new Promise((resolve, reject) => {
         Promise.all([
-            //GoogleHelper.findBusinesses(data),
+            GoogleHelper.findBusinesses(data),
             YelpHelper.findBusinesses(data)
         ]).then(businesses => {
             return resolve(businesses)
@@ -279,17 +274,18 @@ function getListOfBusinessesFromProviders(data) {
 }
 
 function getMoreDetails(businesses) {
-    let data = {}
-    for (var i = 0; i < businesses.length; i++) {
-        if (!data[businesses[i].provider]) {
-            data[businesses[i].provider] = []
-        }
-        data[businesses[i].provider].push(businesses[i])
-    }
-
     return new Promise((resolve, reject) => {
+
+        let data = {}
+        for (var i = 0; i < businesses.length; i++) {
+            if (!data[businesses[i].provider]) {
+                data[businesses[i].provider] = []
+            }
+            data[businesses[i].provider].push(businesses[i])
+        }
+
         Promise.all([
-            //GoogleHelper.getMoreDetails(data['google']),
+            GoogleHelper.getMoreDetails(data['google']),
             YelpHelper.getMoreDetails(data['yelp'])
         ]).then(businesses => {
             return resolve(businesses)

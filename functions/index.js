@@ -27,6 +27,8 @@ db = admin.firestore();
 
 app.use(cors({ origin: true }))
 
+// ENDPOINTS
+
 /**
  * Search Endpoints
  */
