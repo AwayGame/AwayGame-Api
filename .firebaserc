@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "awaygame-api"
+    "dev": "awaygame-api",
+    "prod": "awaygame-api"
   }
 }

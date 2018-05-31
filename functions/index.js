@@ -3,7 +3,10 @@ const functions = require("firebase-functions")
 const express = require("express")
 const app = express()
 const cors = require('cors')
-config = require('./config')
+const axios = require('axios')
+const ENV = (functions.config().env) ? functions.config().env.environment : 'dev'
+
+config = require('./config')[ENV]
 rp = require('request-promise')
 admin = require('firebase-admin');
 
@@ -79,9 +82,10 @@ app.post('/user/verify', (req, res) => {
  * Trip Endpoints
  */
 
+
 app.post('/trip/createTrip', (req, res) => {
-    TripHelper.createTrip(req.body).then(trip => {
-        return res.send(trip)
+    axios.post(config.tripApiUrl + '/trip', req.body).then(response => {
+        return res.send(response.data)
     }).catch(error => {
         console.log("error: ", error)
         return res.status(error.status).send({
