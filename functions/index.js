@@ -15,7 +15,6 @@ const UserHelper = require('./helpers/user')
 
 // Load Middleware
 const Middleware = require('./middleware/index')
-console.log("do we have this?: ", config)
 
 // Initialize the app and database
 admin.initializeApp({
