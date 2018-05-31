@@ -4,20 +4,18 @@ const express = require("express")
 const app = express()
 const cors = require('cors')
 const axios = require('axios')
-const ENV = (functions.config().env) ? functions.config().env.environment : 'dev'
+config = require('./config')
 
-config = require('./config')[ENV]
 rp = require('request-promise')
 admin = require('firebase-admin');
 
 // Load helpers
-const AlgoliaHelper = require('./helpers/algolia')
 const TicketMasterHelper = require('./helpers/ticketMaster')
-const TripHelper = require('./helpers/trip')
 const UserHelper = require('./helpers/user')
 
 // Load Middleware
 const Middleware = require('./middleware/index')
+console.log("do we have this?: ", config)
 
 // Initialize the app and database
 admin.initializeApp({
@@ -31,17 +29,6 @@ db = admin.firestore();
 app.use(cors({ origin: true }))
 
 // ENDPOINTS
-
-/**
- * Search Endpoints
- */
-
-// Use Algolia search to find teams
-app.get('/search/team/:term', (req, res) => {
-    AlgoliaHelper.searchForTeams(req.params.term).then(results => {
-        return res.send(results)
-    })
-});
 
 /**
  * TicketMaster endpoints
