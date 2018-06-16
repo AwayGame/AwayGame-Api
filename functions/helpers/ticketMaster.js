@@ -9,7 +9,7 @@ module.exports = {
     searchForGames: (data) => {
         return new Promise((resolve, reject) => {
             let missingFields = helpers.checkForMissingFields(['team', 'startDate', 'endDate'], data)
-            if(missingFields.length) {
+            if (missingFields.length) {
                 return reject({
                     status: 422,
                     error: 'Missing required fields: ' + missingFields.join(', ')
@@ -28,6 +28,7 @@ module.exports = {
                     endDateTime: data.endDate
                 }
             }, function(err, response, body) {
+                console.log("error?: ", err)
                 if (err) {
                     console.error(err);
                 } else {

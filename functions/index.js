@@ -5,6 +5,7 @@ const app = express()
 const cors = require('cors')
 const axios = require('axios')
 config = require('./config')
+_ = require('underscore')
 
 rp = require('request-promise')
 admin = require('firebase-admin');
@@ -12,6 +13,7 @@ admin = require('firebase-admin');
 // Load helpers
 const TicketMasterHelper = require('./helpers/ticketMaster')
 const UserHelper = require('./helpers/user')
+const TripHelper = require('./helpers/trip')
 
 // Load Middleware
 const Middleware = require('./middleware/index')
@@ -64,11 +66,11 @@ app.post('/user/verify', (req, res) => {
 })
 
 
+
 /**
- * Trip Endpoints
+ * Create a Trip and return it to the clint
+ * @return {Object}  The Trip object
  */
-
-
 app.post('/trip/createTrip', (req, res) => {
     axios.post(config.tripApiUrl + '/trip', req.body).then(response => {
         return res.send(response.data)
@@ -80,5 +82,45 @@ app.post('/trip/createTrip', (req, res) => {
     })
 })
 
+
+/**
+ * Create a Trip and return it to the clint
+ * @return {Object}  The Trip object
+ */
+app.post('/trip/save', (req, res) => {
+    // Save the trip
+    TripHelper.saveTrip(req.body.trip).then(trip => {
+        let tripStub = {
+            id: trip.id,
+            title: "My Trip",
+            startDate: "00asdasd",
+            completed: false,
+            imageUrl: "https://asdasd"
+        }
+
+        UserHelper.addTripStub(tripStub, req.body.userId).then(response => {
+            return res.sendStatus(200)
+        }).catch(e => {
+            console.log("error adding trip to user: ", e)
+        })
+    })
+})
+
 const api = functions.https.onRequest(app)
 module.exports = { api }
+
+/*
+// Set into redis
+RedisHelper.get('gamesToPoll').then(gamesToPoll => {
+    if (!gamesToPoll.games) {
+
+    } else {
+        gamesToPoll.games.push({
+            gameId: userData.gameId,
+            userId: userData.userId,
+            tripId:
+        })
+    }
+})
+
+ */
