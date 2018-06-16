@@ -89,10 +89,11 @@ app.post('/trip/createTrip', (req, res) => {
  * @return {Object}  The Trip object
  */
 app.post('/trip/save', (req, res) => {
+    let trip = JSON.parse(req.body.trip)
     // Save the trip
-    TripHelper.saveTrip(req.body.trip).then(trip => {
+    TripHelper.saveTrip(trip).then(tripResponse => {
         let tripStub = {
-            id: trip.id,
+            id: tripResponse.id,
             title: "My Trip",
             startDate: "00asdasd",
             completed: false,
