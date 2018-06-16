@@ -3,10 +3,11 @@ const functions = require("firebase-functions")
 const express = require("express")
 const app = express()
 const cors = require('cors')
-const axios = require('axios')
+
+moment = require('moment')
+axios = require('axios')
 config = require('./config')
 _ = require('underscore')
-
 rp = require('request-promise')
 admin = require('firebase-admin');
 
@@ -95,13 +96,28 @@ app.post('/trip/save', (req, res) => {
             title: "My Trip",
             startDate: "00asdasd",
             completed: false,
-            imageUrl: "https://asdasd"
+            imageUrl: "https://asdasd",
+            createdAt: moment().toISOString()
         }
 
         UserHelper.addTripStub(tripStub, req.body.userId).then(response => {
             return res.sendStatus(200)
         }).catch(e => {
             console.log("error adding trip to user: ", e)
+        })
+    })
+})
+
+app.post('/trip/delete', (req, res) => {
+    // Save the trip
+    TripHelper.deleteTrip(req.body.tripId).then(deleted => {
+        console.log("trip deleted")
+        console.log("removing from user")
+
+        UserHelper.deleteTripStub(req.body.tripId, req.body.userId).then(response => {
+            return res.sendStatus(200)
+        }).catch(e => {
+            console.log("error deleting trip trip to user: ", e)
         })
     })
 })

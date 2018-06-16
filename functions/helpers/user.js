@@ -1,28 +1,45 @@
 module.exports = {
     verifyUser: (data) => {
-        return new Promise(async function(resolve, reject) {
-            let userData = await getUser(data.uid)
-
-            if (!userData) {
-                let newUser = await createNewUser(data)
-                userData = await getUser(data.uid)
-            }
-
-            return resolve(userData)
+        return new Promise((resolve, reject) => {
+            getUser(data.uid).then(userData => {
+                if (!userData) {
+                    createNewUser(data).then(newUser => {
+                        getUser(data.uid).then(userData => {
+                            return resolve(userData)
+                        })
+                    })
+                } else {
+                    return resolve(userData)
+                }
+            })
         })
     },
     addTripStub: (stub, id) => {
-        return new Promise(async(resolve, reject) => {
-            let user = await getUser(id)
-            
-            if(!user.tripStubs){
-                user.tripStubs = []
-            }
+        return new Promise((resolve, reject) => {
+            getUser(id).then(user => {
+                if (!user.tripStubs) {
+                    user.tripStubs = []
+                }
 
-            user.tripStubs.push(stub)
-            let updateUserResponse = await updateUser(id, user)
+                user.tripStubs.push(stub)
+                updateUser(id, user).then(updateUserResponse => {
+                    return resolve(updateUserResponse)
+                })
+            })
+        })
+    },
+    deleteTripStub: (stubId, userId) => {
+        return new Promise((resolve, reject) => {
+            getUser(userId).then(user => {
 
-            return resolve(updateUserResponse)
+                user.tripStubs = _.without(user.tripStubs, _.findWhere(user.tripStubs, {
+                    id: stubId
+                }));
+
+                updateUser(userId, user).then(updateUserResponse => {
+                    return resolve(updateUserResponse)
+                })
+            })
         })
     }
 }
@@ -68,4 +85,8 @@ function updateUser(id, data) {
                 return resolve(user)
             })
     })
+}
+
+function deleteTrip(argument) {
+    // body...
 }

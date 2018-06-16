@@ -11,5 +11,19 @@ module.exports = {
                     return reject(error)
                 })
         })
+    },
+    deleteTrip: (tripId) => {
+        return new Promise((resolve, reject) => {
+            db.collection('trip')
+                .doc(tripId)
+                .delete()
+                .then(deleted => {
+                    return resolve(deleted)
+                })
+                .catch(error => {
+                    console.log("error deleting trip trip: ", error)
+                    return reject(error)
+                })
+        })
     }
 }
