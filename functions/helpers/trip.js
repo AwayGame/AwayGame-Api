@@ -25,5 +25,19 @@ module.exports = {
                     return reject(error)
                 })
         })
+    },
+    getTrip: (tripId) => {
+        return new Promise((resolve, reject) => {
+            db.collection('trip')
+            .doc(tripId)
+            .get()
+            .then(trip => {
+                return resolve(trip.data())
+            })
+            .catch(error => {
+                console.log("error fetching trip: ", error)
+                return reject(error)
+            })
+        })
     }
 }

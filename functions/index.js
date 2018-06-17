@@ -68,6 +68,21 @@ app.post('/user/verify', (req, res) => {
 
 
 
+
+
+
+
+
+
+app.get('/trip/:id', (req, res) => {
+    TripHelper.getTrip(req.params.id).then(trip => {
+        return res.send({
+            status: 200,
+            trip: trip
+        })
+    })
+})
+
 /**
  * Create a Trip and return it to the clint
  * @return {Object}  The Trip object
@@ -117,6 +132,13 @@ app.post('/trip/delete', (req, res) => {
         console.log("error deleting trip trip to user: ", e)
     })
 })
+
+
+
+
+
+
+
 
 const api = functions.https.onRequest(app)
 module.exports = { api }
