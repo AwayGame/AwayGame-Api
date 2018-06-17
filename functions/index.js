@@ -83,7 +83,6 @@ app.post('/trip/createTrip', (req, res) => {
     })
 })
 
-
 /**
  * Create a Trip and return it to the clint
  * @return {Object}  The Trip object
@@ -98,7 +97,8 @@ app.post('/trip/save', (req, res) => {
             startDate: "00asdasd",
             completed: false,
             imageUrl: "https://asdasd",
-            createdAt: moment().toISOString()
+            createdAt: moment().toISOString(),
+            deleted: false
         }
 
         UserHelper.addTripStub(tripStub, req.body.userId).then(response => {
@@ -111,15 +111,10 @@ app.post('/trip/save', (req, res) => {
 
 app.post('/trip/delete', (req, res) => {
     // Save the trip
-    TripHelper.deleteTrip(req.body.tripId).then(deleted => {
-        console.log("trip deleted")
-        console.log("removing from user")
-
-        UserHelper.deleteTripStub(req.body.tripId, req.body.userId).then(response => {
-            return res.sendStatus(200)
-        }).catch(e => {
-            console.log("error deleting trip trip to user: ", e)
-        })
+    UserHelper.deleteTripStub(req.body.tripId, req.body.userId).then(response => {
+        return res.sendStatus(200)
+    }).catch(e => {
+        console.log("error deleting trip trip to user: ", e)
     })
 })
 

@@ -31,10 +31,10 @@ module.exports = {
     deleteTripStub: (stubId, userId) => {
         return new Promise((resolve, reject) => {
             getUser(userId).then(user => {
-
-                user.tripStubs = _.without(user.tripStubs, _.findWhere(user.tripStubs, {
+                let trip  = _.findWhere(user.tripStubs, {
                     id: stubId
-                }));
+                })
+                trip.deleted = true;
 
                 updateUser(userId, user).then(updateUserResponse => {
                     return resolve(updateUserResponse)
