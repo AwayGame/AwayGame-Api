@@ -31,7 +31,7 @@ module.exports = {
     deleteTripStub: (stubId, userId) => {
         return new Promise((resolve, reject) => {
             getUser(userId).then(user => {
-                let trip  = _.findWhere(user.tripStubs, {
+                let trip = _.findWhere(user.tripStubs, {
                     id: stubId
                 })
                 trip.deleted = true;
@@ -85,8 +85,4 @@ function updateUser(id, data) {
                 return resolve(user)
             })
     })
-}
-
-function deleteTrip(argument) {
-    // body...
 }

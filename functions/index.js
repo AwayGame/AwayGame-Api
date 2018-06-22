@@ -67,12 +67,7 @@ app.post('/user/verify', (req, res) => {
 })
 
 
-
-
-
-
-
-
+// Trip Endpoints
 
 app.get('/trip/:id', (req, res) => {
     TripHelper.getTrip(req.params.id).then(trip => {
@@ -103,25 +98,16 @@ app.post('/trip/createTrip', (req, res) => {
  * @return {Object}  The Trip object
  */
 app.post('/trip/save', (req, res) => {
-    let trip = JSON.parse(req.body.trip)
-    // Save the trip
-    TripHelper.saveTrip(trip).then(tripResponse => {
-        let tripStub = {
-            id: tripResponse.id,
-            title: "My Trip",
-            startDate: "00asdasd",
-            completed: false,
-            imageUrl: "https://asdasd",
-            createdAt: moment().toISOString(),
-            deleted: false
-        }
-
-        UserHelper.addTripStub(tripStub, req.body.userId).then(response => {
+    if(req.body.id) {
+        TripHelper.updateTrip(req.body).then(updateResponse => {
+            console.log("updateResponse: ", updateResponse)
             return res.sendStatus(200)
-        }).catch(e => {
-            console.log("error adding trip to user: ", e)
         })
-    })
+    } else {
+        TripHelper.saveTrip(req.body).then(response => {
+            return res.sendStatus(200)
+        })
+    }
 })
 
 app.post('/trip/delete', (req, res) => {
@@ -132,13 +118,6 @@ app.post('/trip/delete', (req, res) => {
         console.log("error deleting trip trip to user: ", e)
     })
 })
-
-
-
-
-
-
-
 
 const api = functions.https.onRequest(app)
 module.exports = { api }
