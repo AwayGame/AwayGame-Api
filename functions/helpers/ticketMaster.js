@@ -44,7 +44,7 @@ module.exports = {
                         id: event.id,
                         images: event.images,
                         date: moment(event.dates.start.dateTime).format('MM/DD'),
-                        time: moment(event.dates.start.dateTime).format('h:mm a'),
+                        time: getTime(event.dates),
                         ticketUrl: event.url
                     }
                 })
@@ -53,16 +53,42 @@ module.exports = {
     }
 }
 
-function getTitle(eventName) {
-    try {
-        let teams = eventName.split('vs. ')
-        let teamOneWords = teams[0].trim().split(' ')
-        let teamOne = _.last(teamOneWords)
-
-        let teamTwoWords = teams[1].trim().split(' ')
-        let teamTwo = _.last(teamTwoWords)
-        return teamOne + " at " + teamTwo
-    } catch (e) {
-        console.log("ERROR: ", e)
+function getTime(dates) {
+    if(dates.start.timeTBA){
+        return 'TBA'
+    } else {
+        return moment(dates.start.dateTime).format('h:mm a')
     }
+}
+
+function getTitle(eventName) {
+    let teams = getTeamsArray(eventName)
+    
+    let teamOneWords = teams[0].trim().split(' ')
+    let teamOne = _.last(teamOneWords)
+
+    let teamTwoWords = teams[1].trim().split(' ')
+    let teamTwo = _.last(teamTwoWords)
+    return teamOne + " at " + teamTwo
+}
+
+function getTeamsArray(eventName) {
+    let optionOne = returnTeamsSplitByDelimiterIfValid(eventName, 'vs.')
+    let optionTwo = returnTeamsSplitByDelimiterIfValid(eventName, ' at ')
+    let optionThree = returnTeamsSplitByDelimiterIfValid(eventName, 'v.')
+    
+    return optionOne || optionTwo || optionThree || null
+}
+
+function returnTeamsSplitByDelimiterIfValid(eventName, delimiter) {
+    var teams = eventName.split(delimiter)
+    if (teamsArrayIsValid(teams)) {
+        return teams
+    } else {
+        return null
+    }
+}
+
+function teamsArrayIsValid(teams) {
+    return teams && teams.length === 2
 }
