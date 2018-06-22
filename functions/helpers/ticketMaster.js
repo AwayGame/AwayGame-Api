@@ -40,14 +40,29 @@ module.exports = {
                 if (events.page.totalElements === 0) return [];
                 return events._embedded.events.map(event => {
                     return {
-                        name: event.name,
+                        name: getTitle(event.name),
                         id: event.id,
                         images: event.images,
-                        date: event.dates,
-                        stadium: event._embedded.venues[0]
+                        date: moment(event.dates.start.dateTime).format('MM/DD'),
+                        time: moment(event.dates.start.dateTime).format('h:mm a'),
+                        ticketUrl: event.url
                     }
                 })
             }
         })
+    }
+}
+
+function getTitle(eventName) {
+    try {
+        let teams = eventName.split('vs. ')
+        let teamOneWords = teams[0].trim().split(' ')
+        let teamOne = _.last(teamOneWords)
+
+        let teamTwoWords = teams[1].trim().split(' ')
+        let teamTwo = _.last(teamTwoWords)
+        return teamOne + " at " + teamTwo
+    } catch (e) {
+        console.log("ERROR: ", e)
     }
 }
