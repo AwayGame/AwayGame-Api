@@ -4,7 +4,7 @@ const express = require("express")
 const app = express()
 const cors = require('cors')
 
-moment = require('moment')
+moment = require('moment-timezone');
 axios = require('axios')
 config = require('./config')
 _ = require('underscore')

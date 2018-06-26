@@ -23,12 +23,11 @@ module.exports = {
                     apikey: config.ticketMasterApi.clientId,
                     classificationName: "sports",
                     keyword: data.team,
-                    sort: 'date,desc',
+                    sort: 'date,asc',
                     startDateTime: data.startDate,
                     endDateTime: data.endDate
                 }
             }, function(err, response, body) {
-                console.log("error?: ", err)
                 if (err) {
                     console.error(err);
                 } else {
@@ -37,7 +36,13 @@ module.exports = {
             });
 
             function formatEvents(events) {
-                if (events.page.totalElements === 0) return [];
+                if (!events.page.totalElements) return [];
+
+                // Filter out results that we don't want
+                // @TODO: Figure out how to separate bad results. This
+                // means that if there are two of the same game we
+                // need to remove the one that is not needed
+                
                 return events._embedded.events.map(event => {
                     return {
                         name: getTitle(event.name),
@@ -57,19 +62,13 @@ function getTime(dates) {
     if(dates.start.timeTBA){
         return 'TBA'
     } else {
-        return moment(dates.start.dateTime).format('h:mm a')
+        return moment(dates.start.localDate + 'T' + dates.start.localTime).format('h:mm a')
     }
 }
 
 function getTitle(eventName) {
     let teams = getTeamsArray(eventName)
-    
-    let teamOneWords = teams[0].trim().split(' ')
-    let teamOne = _.last(teamOneWords)
-
-    let teamTwoWords = teams[1].trim().split(' ')
-    let teamTwo = _.last(teamTwoWords)
-    return teamOne + " at " + teamTwo
+    return teams[0].trim() + " at " + teams[1].trim()
 }
 
 function getTeamsArray(eventName) {
