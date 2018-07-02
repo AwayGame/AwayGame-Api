@@ -10,10 +10,10 @@ module.exports = {
                 .then(tripResponse => {
                     let tripStub = {
                         id: tripResponse.id,
-                        title: "My Trip",
-                        startDate: "00asdasd",
+                        title: data.title,
+                        startDate: data.startDate,
                         completed: false,
-                        imageUrl: "https://asdasd",
+                        imageUrl: data.imageUrl,
                         createdAt: moment().toISOString(),
                         deleted: false
                     }
@@ -50,6 +50,7 @@ module.exports = {
                 .doc(tripId)
                 .get()
                 .then(trip => {
+                    console.log("RETURNING THIS: ", trip.data())
                     return resolve(trip.data())
                 })
                 .catch(error => {

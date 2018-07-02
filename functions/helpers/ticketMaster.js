@@ -38,14 +38,16 @@ module.exports = {
             function formatEvents(events) {
                 if (!events.page.totalElements) return [];
 
-                // Filter out results that we don't want
-                // @TODO: Figure out how to separate bad results. This
-                // means that if there are two of the same game we
-                // need to remove the one that is not needed
-                
-                return events._embedded.events.map(event => {
+                let eventsToFormat = []
+                events._embedded.events.forEach(event => {
+                    if (event.name.split('at')[0].trim() === data.team.trim()){
+                        eventsToFormat.push(event)
+                    }
+                })
+
+                return eventsToFormat.map(event => {
                     return {
-                        name: getTitle(event.name),
+                        name: event.name,
                         id: event.id,
                         images: event.images,
                         date: moment(event.dates.start.dateTime).format('MM/DD'),
@@ -59,23 +61,18 @@ module.exports = {
 }
 
 function getTime(dates) {
-    if(dates.start.timeTBA){
+    if (dates.start.timeTBA) {
         return 'TBA'
     } else {
         return moment(dates.start.localDate + 'T' + dates.start.localTime).format('h:mm a')
     }
 }
 
-function getTitle(eventName) {
-    let teams = getTeamsArray(eventName)
-    return teams[0].trim() + " at " + teams[1].trim()
-}
-
 function getTeamsArray(eventName) {
     let optionOne = returnTeamsSplitByDelimiterIfValid(eventName, 'vs.')
     let optionTwo = returnTeamsSplitByDelimiterIfValid(eventName, ' at ')
     let optionThree = returnTeamsSplitByDelimiterIfValid(eventName, 'v.')
-    
+
     return optionOne || optionTwo || optionThree || null
 }
 

@@ -71,10 +71,7 @@ app.post('/user/verify', (req, res) => {
 
 app.get('/trip/:id', (req, res) => {
     TripHelper.getTrip(req.params.id).then(trip => {
-        return res.send({
-            status: 200,
-            trip: trip
-        })
+        return res.send(trip)
     })
 })
 
@@ -91,6 +88,9 @@ app.post('/trip/createTrip', (req, res) => {
             error: error.error
         })
     })
+
+    // Save request body in the background
+    db.collection('tripRequestData').add(req.body)
 })
 
 /**
