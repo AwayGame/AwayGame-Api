@@ -35,7 +35,7 @@ module.exports = {
                 }
             });
 
-            function formatEvents(events) {
+            /*function formatEvents(events) {
                 if (!events.page.totalElements) return [];
 
                 let eventsToFormat = []
@@ -55,9 +55,28 @@ module.exports = {
                         ticketUrl: event.url
                     }
                 })
+            }*/
+
+            function formatEvents(events) {
+                if (!events.page.totalElements) return [];
+                return events._embedded.events.map(event => {
+                    return {
+                        name: getTitle(event.name),
+                        id: event.id,
+                        images: event.images,
+                        date: moment(event.dates.start.dateTime).format('MM/DD'),
+                        time: getTime(event.dates),
+                        ticketUrl: event.url
+                    }
+                })
             }
         })
     }
+}
+
+function getTitle(eventName) {
+    let teams = getTeamsArray(eventName)
+    return teams[0].trim() + " at " + teams[1].trim()
 }
 
 function getTime(dates) {
