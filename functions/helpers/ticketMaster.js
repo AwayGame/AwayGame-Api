@@ -1,14 +1,10 @@
 var helpers = require('./helpers')
 
 module.exports = {
-    /**
-     * Searches the Algolia store for teams on the teams index
-     * @param  {String} term    The term to search 
-     * @return {Array}  content The result found
-     */
     searchForGames: (data) => {
         return new Promise((resolve, reject) => {
             let missingFields = helpers.checkForMissingFields(['team', 'startDate', 'endDate'], data)
+            let games = null
             if (missingFields.length) {
                 return reject({
                     status: 422,
@@ -31,42 +27,100 @@ module.exports = {
                 if (err) {
                     console.error(err);
                 } else {
-                    return resolve(formatEvents(JSON.parse(body)));
+                    if (!JSON.parse(body).page.totalElements) return resolve([])
+
+                    games = JSON.parse(body)._embedded.events
+                    removeDuplicates()
+
+                    return resolve(formatEvents(games));
                 }
             });
 
-            /*function formatEvents(events) {
-                if (!events.page.totalElements) return [];
+            function removeDuplicates() {
+                let pairs = []
+                let finalListOfGames = []
 
-                let eventsToFormat = []
-                events._embedded.events.forEach(event => {
-                    if (event.name.split('at')[0].trim() === data.team.trim()){
-                        eventsToFormat.push(event)
+                for (let i = 0; i < games.length; i++) {
+                    let gameOne = games[i]
+                    let matched = false
+                    for (let j = 0; j < games.length; j++) {
+                        let gameTwo = games[j]
+                        if (gameOne.id != gameTwo.id && isPair(gameOne, gameTwo) && !pairIsInPairs(pairs, gameOne.id + '-' + gameTwo.id)) {
+                            matched = true
+                            pairs.push({
+                                gameOne: gameOne,
+                                gameTwo: gameTwo
+                            })
+                        }
                     }
+
+                    if (!matched && getTeamsArray(gameOne.name)) {
+                        finalListOfGames.push(gameOne)
+                    }
+                }
+
+                pairs.forEach(pair => {
+                    finalListOfGames.push(getAwayGame(pair))
                 })
 
-                return eventsToFormat.map(event => {
-                    return {
-                        name: event.name,
-                        id: event.id,
-                        images: event.images,
-                        date: moment(event.dates.start.dateTime).format('MM/DD'),
-                        time: getTime(event.dates),
-                        ticketUrl: event.url
-                    }
+                // Add games that did not have a pair
+
+                games = _.uniq(finalListOfGames)
+            }
+
+            function getAwayGame(pair) {
+                let city = pair.gameOne._embedded.venues[0].city.name
+                let teamOne = getTeamsArray(pair.gameOne.name)[1]
+                let teamTwo = getTeamsArray(pair.gameTwo.name)[1]
+
+                if (teamOne.includes(city)) {
+                    return pair.gameOne
+                } else {
+                    return pair.gameTwo
+                }
+            }
+
+            function pairIsInPairs(pairs, id) {
+                return pairs.some(pair => {
+                    return id === (pair.gameOne.id + '-' + pair.gameTwo.id) || id === (pair.gameTwo.id + '-' + pair.gameOne.id)
                 })
-            }*/
+            }
+
+            function teamNamesMatch(gameOne, gameTwo) {
+                let gameOneTeams = getTeamsArray(gameOne.name)
+                let gameTwoTeams = getTeamsArray(gameTwo.name)
+                if (!gameOneTeams || !gameTwoTeams) return false
+                return gameOneTeams[0].trim() === gameTwoTeams[1].trim() && gameOneTeams[1].trim() === gameTwoTeams[0].trim()
+            }
+
+            function isPair(gameOne, gameTwo) {
+                if (!teamNamesMatch(gameOne, gameTwo)) {
+                    return false
+                }
+
+                if (gameOne.name.includes('vs') && gameTwo.name.includes('vs') || gameOne.name.includes('at') && gameTwo.name.includes('at')) {
+                    return false
+                }
+
+                let gameOneDate = moment(gameOne.dates.start.dateTime)
+                let gameTwoDate = moment(gameTwo.dates.start.dateTime)
+
+                return (gameOneDate.isSame(gameTwoDate, 'day') && Math.abs(gameTwoDate.diff(gameOneDate, 'minutes')) <= 15)
+            }
+
+            function getId(url) {
+                return url.split('/c/')[1].split('?')[0]
+            }
 
             function formatEvents(events) {
-                if (!events.page.totalElements) return [];
-                return events._embedded.events.map(event => {
+                return games.map(game => {
                     return {
-                        name: getTitle(event.name),
-                        id: event.id,
-                        images: event.images,
-                        date: moment(event.dates.start.dateTime).format('MM/DD'),
-                        time: getTime(event.dates),
-                        ticketUrl: event.url
+                        name: getTitle(game.name),
+                        id: game.id,
+                        images: game.images,
+                        date: moment(game.dates.start.dateTime).format('MM/DD'),
+                        time: getTime(game.dates),
+                        ticketUrl: game.url
                     }
                 })
             }

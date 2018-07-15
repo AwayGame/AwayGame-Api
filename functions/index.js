@@ -81,16 +81,20 @@ app.get('/trip/:id', (req, res) => {
  */
 app.post('/trip/createTrip', (req, res) => {
     axios.post(config.tripApiUrl + '/trip', req.body).then(response => {
+        saveTripRequestData(req.body.failed || null)
         return res.send(response.data)
     }).catch(error => {
         console.log("error: ", error)
+        saveTripRequestData(true)
         return res.status(error.status).send({
             error: error.error
         })
     })
 
-    // Save request body in the background
-    db.collection('tripRequestData').add(req.body)
+    function saveTripRequestData(failed = false) {
+        let collection = (failed) ? 'failedTripRequestData' : 'tripRequestData'
+        db.collection(collection).add(req.body)
+    }
 })
 
 /**

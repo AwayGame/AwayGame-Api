@@ -1,3 +1,5 @@
+const _ = require('underscore')
+
 module.exports = {
     verifyUser: (data) => {
         return new Promise((resolve, reject) => {
@@ -55,7 +57,10 @@ function getUser(id) {
         db.collection('user').doc(id)
             .get()
             .then(user => {
-                return resolve(user.data())
+                // sort tripStubs
+                let dataToReturn = Object.assign({}, user.data())
+                dataToReturn.tripStubs = dataToReturn.tripStubs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                return resolve(dataToReturn)
             })
     })
 }
