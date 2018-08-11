@@ -3,17 +3,39 @@ const _ = require('underscore')
 module.exports = {
     verifyUser: (data) => {
         return new Promise((resolve, reject) => {
+            console.log("FETCHING USER WITH THIS ID: ", data.uid)
             getUser(data.uid).then(userData => {
                 if (!userData) {
+                    console.log("creating new user...")
                     createNewUser(data).then(newUser => {
+                        console.log("user has been created. Now fetching")
+                        console.log("here it is: ", newUser)
                         getUser(data.uid).then(userData => {
                             return resolve(userData)
                         })
                     })
                 } else {
+                    console.log("user was already in db. Returning")
                     return resolve(userData)
                 }
             })
+        })
+    },
+    deleteUser: (id) => {
+        return new Promise((resolve, reject) => {
+            console.log("deleting user with this id: ", id)
+
+            admin.auth().deleteUser(id).then(function() {
+                // delete data
+                db.collection('user').doc(id).delete()
+                    console.log("Successfully deleted user");
+                    return resolve(200)
+                })
+                .catch(function(error) {
+                    console.log("Error deleting user:", error);
+                    return resolve(200)
+                });
+
         })
     },
     addTripStub: (stub, id) => {
@@ -56,9 +78,16 @@ function getUser(id) {
     return new Promise((resolve, reject) => {
         db.collection('user').doc(id)
             .get()
-            .then(user => {
+            .then(user => {                
+                if(!user.data()) return resolve(null)
+                
                 // sort tripStubs
                 let dataToReturn = Object.assign({}, user.data())
+
+                if (!dataToReturn.tripStubs) {
+                    dataToReturn.tripStubs = []
+                }
+
                 dataToReturn.tripStubs = dataToReturn.tripStubs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                 return resolve(dataToReturn)
             })

@@ -66,6 +66,14 @@ app.post('/user/verify', (req, res) => {
     })
 })
 
+app.delete('/user/:id', (req, res) => {
+    UserHelper.deleteUser(req.params.id).then(resp => {
+        return res.send(resp)
+    }).catch(err => {
+        return res.status(err.code).send(err.message)
+    })
+})
+
 
 // Trip Endpoints
 

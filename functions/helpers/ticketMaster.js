@@ -118,7 +118,7 @@ module.exports = {
                         name: getTitle(game.name),
                         id: game.id,
                         images: game.images,
-                        date: moment(game.dates.start.dateTime).format('MM/DD'),
+                        date: moment(game.dates.start.localDate).format('MM/DD'),
                         time: getTime(game.dates),
                         ticketUrl: game.url
                     }
